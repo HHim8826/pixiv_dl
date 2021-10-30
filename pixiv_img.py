@@ -12,8 +12,66 @@ def config_pixiv():
     return cfg
     
 # mark folder
-def mark_dir(name:str,search=None):
-    if search == None:    
+def mark_dir(name:str,search=None,ranking=None):
+    if ranking == 'daily':
+        mode = 'daily'
+        part = f'pixiv/img/{mode}/{name}的作品'
+        try:
+            os.makedirs(part)
+        except FileExistsError:
+            pass
+    elif ranking == 'weekly':
+        mode = 'weekly'
+        part = f'pixiv/img/{mode}/{name}的作品'
+        try:
+            os.makedirs(part)
+        except FileExistsError:
+            pass
+    elif ranking == 'monthly':
+        mode = 'monthly'
+        part = f'pixiv/img/{mode}/{name}的作品'
+        try:
+            os.makedirs(part)
+        except FileExistsError:
+            pass
+    elif ranking == 'rookie':
+        mode = 'rookie'
+        part = f'pixiv/img/{mode}/{name}的作品'
+        try:
+            os.makedirs(part)
+        except FileExistsError:
+            pass
+    elif ranking == 'original':
+        mode = 'original'
+        part = f'pixiv/img/{mode}/{name}的作品'
+        try:
+            os.makedirs(part)
+        except FileExistsError:
+            pass
+    elif ranking == 'female':
+        mode = 'female'
+        part = f'pixiv/img/{mode}/{name}的作品'
+        try:
+            os.makedirs(part)
+        except FileExistsError:
+            pass
+    elif ranking == 'daily_r18':
+        mode = 'daily_r18'
+        part = f'pixiv/img/{mode}/{name}的作品'
+        try:
+            os.makedirs(part)
+        except FileExistsError:
+            pass
+    elif ranking == 'male':
+        mode = 'male'
+        part = f'pixiv/img/{mode}/{name}的作品'
+        try:
+            os.makedirs(part)
+        except FileExistsError:
+            pass   
+    
+    
+    elif search == None:    
         part = f'pixiv/img/{name}的作品'
         try:
             os.makedirs(part)
@@ -25,6 +83,7 @@ def mark_dir(name:str,search=None):
             os.makedirs(part)
         except FileExistsError:
             pass
+    
 
 # get json data
 def pixiv_get(id,cfg:dict) -> str:
@@ -40,17 +99,20 @@ def pixiv_get(id,cfg:dict) -> str:
     return body_data
 
 # download img
-def dl_img(id:int or list,cfg:dict,search=None) -> bytes:
+def dl_img(id:int or list,cfg:dict,search=None,ranking=None) -> bytes:
     headers = {'referer' : "https://www.pixiv.net/",'cookie' : f"{cfg['login']['cookie']}",'user-agent': "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/95.0.4638.54 Safari/537.36"}
     # 判斷 id 是否列表
     if type(id) == list:
         for i in id:
             # get json data
-            data_json = pixiv_get(i,cfg)
+            data_json = pixiv_get(i[0],cfg)
             # get folder name
-            folder_name = get_user(i)
+            folder_name = i[1]
             # mark folder
-            mark_dir(folder_name,search)
+            if search != None:
+                mark_dir(folder_name,search)
+            elif ranking != None:
+                mark_dir(folder_name,ranking=ranking)
             for iter1 in tqdm(data_json):
                 # get original url
                 iter1 = iter1['urls']['original']
@@ -58,11 +120,15 @@ def dl_img(id:int or list,cfg:dict,search=None) -> bytes:
                 n_name = iter1.split("/")
                 req = requests.get(iter1,headers=headers)               
                 # save img
-                with open(f'pixiv/img/{search}/{folder_name}的作品/{n_name[-1]}','wb') as f:
-                    f.write(req.content)
+                if search != None:
+                    with open(f'pixiv/img/{search}/{folder_name}的作品/{n_name[-1]}','wb') as f:
+                        f.write(req.content)
+                elif ranking != None:
+                    with open(f'pixiv/img/{ranking}/{folder_name}的作品/{n_name[-1]}','wb') as f:
+                        f.write(req.content)                    
         return 'DONE'
             
-    folder_name = get_user(id)          
+    folder_name = get_user(id)         
     data_json = pixiv_get(id,cfg)
     mark_dir(folder_name)
     for i in tqdm(data_json):
@@ -101,31 +167,87 @@ def pixiv_search(name:str,cfg:dict) -> list:
     for i in class_json:
         try:
             # get id
-            id_num = req['body'][i]['data']
-            for i in id_num:
-                id_list.append(i['id'])
+            body_deta = req['body'][i]['data']
+            for i in body_deta:
+                id_num = i['id']
+                userName = i['userName']
+                userName = userName.replace(r"\u0027",'')
+                userName = userName.replace(r"*",'')
+                id_list.append([id_num,userName])
     
 
         except KeyError:
             # get id
-            id_num = req['body'][i]['recent']
-            id_long = len(id_num)
+            body_deta = req['body'][i]['recent']
+            id_long = len(body_deta)
             # print(id_long)
-            for num in range(id_long):   
-                id_list.append(id_num[num]['id'])
+            for num in range(id_long): 
+                id_num = body_deta[num]['id']
+                userName = body_deta[num]['userName']
+                userName = userName.replace(r"\u0027",'')
+                userName = userName.replace(r"*",'')
+                id_list.append([id_num,userName])
             
                      
-            id_num_2 = req['body'][i]['permanent']
-            id_long_2 = len(id_num_2)
+            body_deta_1 = req['body'][i]['permanent']
+            id_long_2 = len(body_deta_1)
             # print(id_long_2)
             for num_2 in range(id_long_2):
-                id_list.append(id_num_2[num_2]['id'])
-               
-               
+                id_num_2 = body_deta_1[num_2]['id']
+                userName_2 = body_deta_1[num_2]['userName'] 
+                userName_2 = userName.replace(r"\u0027",'')
+                userName_2 = userName.replace(r"*",'')
+                id_list.append([id_num_2,userName_2])
+             
     search = name
     return id_list,search
 
-# get name
+# ['daily','weekly','monthly','rookie','original','female','daily_r18','male']
+def ranking(page:int, cfg:dict,mode=0):
+    headers = {'referer' : "https://www.pixiv.net/ranking.php",'cookie' : f"{cfg['login']['cookie']}",'user-agent': "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/95.0.4638.54 Safari/537.36",'Content-Type': 'application/json'}
+    id_name_list = []
+ 
+    if mode == 0:
+        mode = 'daily'
+    elif mode == 1:
+        mode = 'weekly'
+    elif mode == 2:
+        mode = 'monthly'
+    elif mode == 3:
+        mode = 'rookie'
+    elif mode == 4:
+        mode = 'original'
+    elif mode == 5:
+        mode = 'female'
+    elif mode == 6:
+        mode = 'daily_r18'
+    elif mode == 7:
+        mode = 'male'
+        
+    for page_num in range(page):
+        
+        # ?p={page_num+1}&format=json
+        url = f'https://www.pixiv.net/ranking.php'
+        
+        params = {
+            'p' : page_num+1,
+            'format' : 'json',
+            'mode' : mode
+        }
+        req = requests.get(url ,headers=headers,params=params)
+        
+        req = req.json()
+        json_data = req['contents']
+        times = len(json_data)
+        for len_data in range(times):
+            id_num = json_data[len_data]['illust_id']
+            userName = json_data[len_data]['user_name']
+            id_name_list.append([id_num,userName])
+    
+    return id_name_list,mode
+                
+
+# get name for id mode
 def get_user(id:int) -> str:   
     url = f'https://www.pixiv.net/artworks/{id}'
 
@@ -148,16 +270,36 @@ def get_user(id:int) -> str:
     return name    
     
 def main():
-    cfg = config_pixiv()
+    print('0:Pixiv_id mode\n1:Search mode\n2:ranking mode')
+    mode = int(input('Mode:'))
+    if mode == 0: #id mode
+        cfg = config_pixiv()
+        dl_img(int(input('Pixiv_id:')),cfg)
+    elif mode == 1: #search mode
+        cfg = config_pixiv()
+        id_list , search_name = pixiv_search(input("Search:"),cfg)
+        dl_img(id_list,cfg,search_name)
+    elif mode == 2: #ranking mode?
+        cfg = config_pixiv()
+        # ['daily','weekly','monthly','rookie','original','female','daily_r18','male']
+        page = int(input('Page:'))
+        print('0:daily\n1:weekly\n2:monthly\n3:rookie\n4:original\n5:for female\n6:daily_r18\n7:for male')
+        ranking_num = int(input('ranking_mode:'))
+        id_name_list , mode_ranking = ranking(page,cfg,mode=ranking_num)
+        
+        dl_img(id_name_list,cfg,ranking=mode_ranking)
+        
+
+    # cfg = config_pixiv()
     # print(cfg['login']['cookie'])
     
-    id_list , search_name = pixiv_search(input("search:"),cfg)
+    # id_list , search_name = pixiv_search('甘雨',cfg)
     # print(name)
     # print(id_list)
     # name = get_user(id_list)
     # mark_dir(name)
     
-    dl_img(id_list,cfg,search_name)
+    # dl_img(id_list,cfg,search_name)
     
     # print(pixiv_get())
     
