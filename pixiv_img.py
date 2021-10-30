@@ -12,12 +12,19 @@ def config_pixiv():
     return cfg
     
 # mark folder
-def mark_dir(name:str):
-    part = f'pixiv/img/{name}的作品'
-    try:
-        os.makedirs(part)
-    except FileExistsError:
-        pass
+def mark_dir(name:str,search=None):
+    if search == None:    
+        part = f'pixiv/img/{name}的作品'
+        try:
+            os.makedirs(part)
+        except FileExistsError:
+            pass
+    elif search != None:
+        part = f'pixiv/img/{search}/{name}的作品'
+        try:
+            os.makedirs(part)
+        except FileExistsError:
+            pass
 
 # get json data
 def pixiv_get(id,cfg:dict) -> str:
@@ -33,7 +40,7 @@ def pixiv_get(id,cfg:dict) -> str:
     return body_data
 
 # download img
-def dl_img(id:int or list,cfg:dict) -> bytes:
+def dl_img(id:int or list,cfg:dict,search=None) -> bytes:
     headers = {'referer' : "https://www.pixiv.net/",'cookie' : f"{cfg['login']['cookie']}",'user-agent': "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/95.0.4638.54 Safari/537.36"}
     # 判斷 id 是否列表
     if type(id) == list:
@@ -43,7 +50,7 @@ def dl_img(id:int or list,cfg:dict) -> bytes:
             # get folder name
             folder_name = get_user(i)
             # mark folder
-            mark_dir(folder_name)
+            mark_dir(folder_name,search)
             for iter1 in tqdm(data_json):
                 # get original url
                 iter1 = iter1['urls']['original']
@@ -51,7 +58,7 @@ def dl_img(id:int or list,cfg:dict) -> bytes:
                 n_name = iter1.split("/")
                 req = requests.get(iter1,headers=headers)               
                 # save img
-                with open(f'pixiv/img/{folder_name}的作品/{n_name[-1]}','wb') as f:
+                with open(f'pixiv/img/{search}/{folder_name}的作品/{n_name[-1]}','wb') as f:
                     f.write(req.content)
         return 'DONE'
             
@@ -113,8 +120,10 @@ def pixiv_search(name:str,cfg:dict) -> list:
             # print(id_long_2)
             for num_2 in range(id_long_2):
                 id_list.append(id_num_2[num_2]['id'])
-                
-    return id_list
+               
+               
+    search = name
+    return id_list,search
 
 # get name
 def get_user(id:int) -> str:   
@@ -132,24 +141,26 @@ def get_user(id:int) -> str:
         name =  it.group('name')
     
     # del非法字符
-    name = re.sub(r'\/*?"<>|:','',name)
+    name = re.sub(r'\/"<>|:?','',name)
     # ' == \u0027
     name = name.replace(r"\u0027",'')
+    name = name.replace(r"*",'')
     return name    
     
 def main():
     cfg = config_pixiv()
     # print(cfg['login']['cookie'])
     
-    id_list= pixiv_search(input("search:"),cfg)
+    id_list , search_name = pixiv_search(input("search:"),cfg)
+    # print(name)
     # print(id_list)
     # name = get_user(id_list)
     # mark_dir(name)
     
-    dl_img(id_list,cfg)
-    
+    dl_img(id_list,cfg,search_name)
     
     # print(pixiv_get())
     
 if __name__ == '__main__': 
     main()
+    # mark_dir('a','b')
