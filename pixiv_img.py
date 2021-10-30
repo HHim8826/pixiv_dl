@@ -19,7 +19,7 @@ def mark_dir(name:str,search=None):
             os.makedirs(part)
         except FileExistsError:
             pass
-    elif search != None:
+    elif search != None and isinstance(search,str):
         part = f'pixiv/img/{search}/{name}的作品'
         try:
             os.makedirs(part)
