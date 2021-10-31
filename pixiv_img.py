@@ -370,6 +370,9 @@ def main():
     # print(pixiv_get())
     
 if __name__ == '__main__': 
-    main()
+    try:
+        main()
+    except KeyboardInterrupt:
+        exit('\nexit. . .')
     # mark_dir('a','b')
 
