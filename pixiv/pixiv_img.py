@@ -1,4 +1,3 @@
-#-*- coding: utf-8 -*
 import requests
 import os
 import re
@@ -9,7 +8,10 @@ from json.decoder import JSONDecodeError
 
 # get pixiv_cookie.toml
 def config_pixiv():
-    cfg = toml.load(os.path.expanduser('pixiv/pixiv_cookie.toml'))
+    try:
+        cfg = toml.load(os.path.expanduser('pixiv/pixiv_cookie.toml'))
+    except JSONDecodeError:
+        exit('未登錄 . . .')
     return cfg
     
 # mark folder
@@ -319,14 +321,11 @@ def main():
         ranking_num = int(input('ranking_mode:'))
         AllInOneDir = False
         if ranking_num == 6:
-            try:
-                print('0:daily_r18\n1:weekly_r18\n2:male_r18\n3:female_r18')
-                r18mode = int(input("R18_mode:"))
-                id_name_list , mode_ranking = ranking(page,cfg,mode_num=ranking_num,r18mode=r18mode)
-                # print(mode_ranking)
-                dl_img(id_name_list,cfg,ranking=mode_ranking,r18mode=True,AllInOneDir=AllInOneDir)
-            except JSONDecodeError:
-                exit('未登錄 . . .')             
+            print('0:daily_r18\n1:weekly_r18\n2:male_r18\n3:female_r18')
+            r18mode = int(input("R18_mode:"))
+            id_name_list , mode_ranking = ranking(page,cfg,mode_num=ranking_num,r18mode=r18mode)
+            # print(mode_ranking)
+            dl_img(id_name_list,cfg,ranking=mode_ranking,r18mode=True,AllInOneDir=AllInOneDir)            
         else:
             id_name_list , mode_ranking = ranking(page,cfg,mode_num=ranking_num)           
             dl_img(id_name_list,cfg,ranking=mode_ranking,AllInOneDir=AllInOneDir)
