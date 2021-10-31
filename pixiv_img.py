@@ -16,73 +16,73 @@ def config_pixiv():
 def mark_dir(name:str,search=None,ranking=None,r18mode=False):
     if ranking == 'daily':
         mode = 'daily'
-        part = f'./img/{mode}/{name}的作品'
+        path = f'./img/{mode}/{name}的作品'
         try:
-            os.makedirs(part)
+            os.makedirs(path)
         except FileExistsError:
             pass
     elif ranking == 'weekly':
         mode = 'weekly'
-        part = f'./img/{mode}/{name}的作品'
+        path = f'./img/{mode}/{name}的作品'
         try:
-            os.makedirs(part)
+            os.makedirs(path)
         except FileExistsError:
             pass
     elif ranking == 'monthly':
         mode = 'monthly'
-        part = f'./img/{mode}/{name}的作品'
+        path = f'./img/{mode}/{name}的作品'
         try:
-            os.makedirs(part)
+            os.makedirs(path)
         except FileExistsError:
             pass
     elif ranking == 'rookie':
         mode = 'rookie'
-        part = f'./img/{mode}/{name}的作品'
+        path = f'./img/{mode}/{name}的作品'
         try:
-            os.makedirs(part)
+            os.makedirs(path)
         except FileExistsError:
             pass
     elif ranking == 'original':
         mode = 'original'
-        part = f'./img/{mode}/{name}的作品'
+        path = f'./img/{mode}/{name}的作品'
         try:
-            os.makedirs(part)
+            os.makedirs(path)
         except FileExistsError:
             pass
     elif ranking == 'female':
         mode = 'female'
-        part = f'./img/{mode}/{name}的作品'
+        path = f'./img/{mode}/{name}的作品'
         try:
-            os.makedirs(part)
+            os.makedirs(path)
         except FileExistsError:
             pass
     elif ranking == 'daily_r18':
         if r18mode == True:
             mode = 'daily_r18'
-            part = f'./img/R18/{name}的作品'
+            path = f'./img/R18/{name}的作品'
             try:
-                os.makedirs(part)
+                os.makedirs(path)
             except FileExistsError:
                 pass
     elif ranking == 'male':
         mode = 'male'
-        part = f'./img/{mode}/{name}的作品'
+        path = f'./img/{mode}/{name}的作品'
         try:
-            os.makedirs(part)
+            os.makedirs(path)
         except FileExistsError:
             pass   
     
     
     elif search == None:    
-        part = f'./img/{name}的作品'
+        path = f'./img/{name}的作品'
         try:
-            os.makedirs(part)
+            os.makedirs(path)
         except FileExistsError:
             pass
     elif search != None and isinstance(search,str):
-        part = f'./img/{search}/{name}的作品'
+        path = f'./img/{search}/{name}的作品'
         try:
-            os.makedirs(part)
+            os.makedirs(path)
         except FileExistsError:
             pass
     
@@ -341,7 +341,7 @@ def main():
         page = int(input('Page:'))
         print('0:daily\n1:weekly\n2:monthly\n3:rookie\n4:original\n5:for female\n6:daily_r18(login)\n7:for male')
         ranking_num = int(input('ranking_mode:'))
-        AllInOneDir = False
+        AllInOneDir = cfg['path']['AllInOnePath']
         if ranking_num == 6:
             try:
                 print('0:daily_r18\n1:weekly_r18\n2:male_r18\n3:female_r18')
