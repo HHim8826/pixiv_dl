@@ -9,49 +9,49 @@ from json.decoder import JSONDecodeError
 
 # get pixiv_cookie.toml
 def config_pixiv():
-    cfg = toml.load(os.path.expanduser('pixiv/pixiv_cookie.toml'))       
+    cfg = toml.load(os.path.expanduser('./pixiv_cookie.toml'))       
     return cfg
     
 # mark folder
 def mark_dir(name:str,search=None,ranking=None,r18mode=False):
     if ranking == 'daily':
         mode = 'daily'
-        part = f'pixiv/img/{mode}/{name}的作品'
+        part = f'./img/{mode}/{name}的作品'
         try:
             os.makedirs(part)
         except FileExistsError:
             pass
     elif ranking == 'weekly':
         mode = 'weekly'
-        part = f'pixiv/img/{mode}/{name}的作品'
+        part = f'./img/{mode}/{name}的作品'
         try:
             os.makedirs(part)
         except FileExistsError:
             pass
     elif ranking == 'monthly':
         mode = 'monthly'
-        part = f'pixiv/img/{mode}/{name}的作品'
+        part = f'./img/{mode}/{name}的作品'
         try:
             os.makedirs(part)
         except FileExistsError:
             pass
     elif ranking == 'rookie':
         mode = 'rookie'
-        part = f'pixiv/img/{mode}/{name}的作品'
+        part = f'./img/{mode}/{name}的作品'
         try:
             os.makedirs(part)
         except FileExistsError:
             pass
     elif ranking == 'original':
         mode = 'original'
-        part = f'pixiv/img/{mode}/{name}的作品'
+        part = f'./img/{mode}/{name}的作品'
         try:
             os.makedirs(part)
         except FileExistsError:
             pass
     elif ranking == 'female':
         mode = 'female'
-        part = f'pixiv/img/{mode}/{name}的作品'
+        part = f'./img/{mode}/{name}的作品'
         try:
             os.makedirs(part)
         except FileExistsError:
@@ -59,14 +59,14 @@ def mark_dir(name:str,search=None,ranking=None,r18mode=False):
     elif ranking == 'daily_r18':
         if r18mode == True:
             mode = 'daily_r18'
-            part = f'pixiv/img/R18/{name}的作品'
+            part = f'./img/R18/{name}的作品'
             try:
                 os.makedirs(part)
             except FileExistsError:
                 pass
     elif ranking == 'male':
         mode = 'male'
-        part = f'pixiv/img/{mode}/{name}的作品'
+        part = f'./img/{mode}/{name}的作品'
         try:
             os.makedirs(part)
         except FileExistsError:
@@ -74,13 +74,13 @@ def mark_dir(name:str,search=None,ranking=None,r18mode=False):
     
     
     elif search == None:    
-        part = f'pixiv/img/{name}的作品'
+        part = f'./img/{name}的作品'
         try:
             os.makedirs(part)
         except FileExistsError:
             pass
     elif search != None and isinstance(search,str):
-        part = f'pixiv/img/{search}/{name}的作品'
+        part = f'./img/{search}/{name}的作品'
         try:
             os.makedirs(part)
         except FileExistsError:
@@ -113,7 +113,7 @@ def dl_img(id:int or list,cfg:dict,search=None,ranking=None,r18mode=False,AllInO
                     url = url['urls']['original']
                     re_name = url.split("/")
                     req = requests.get(url,headers=headers)
-                    with open(f'pixiv/img/{re_name[-1]}','wb') as f:
+                    with open(f'./img/{re_name[-1]}','wb') as f:
                                 f.write(req.content)           
             else:
                 # get folder name
@@ -134,14 +134,14 @@ def dl_img(id:int or list,cfg:dict,search=None,ranking=None,r18mode=False,AllInO
                     req = requests.get(iter1,headers=headers)               
                     # save img
                     if search != None:
-                        with open(f'pixiv/img/{search}/{folder_name}的作品/{n_name[-1]}','wb') as f:
+                        with open(f'./img/{search}/{folder_name}的作品/{n_name[-1]}','wb') as f:
                             f.write(req.content)
                     elif ranking != None:
                         if r18mode == True:
-                            with open(f'pixiv/img/R18/{folder_name}的作品/{n_name[-1]}','wb') as f:
+                            with open(f'./img/R18/{folder_name}的作品/{n_name[-1]}','wb') as f:
                                 f.write(req.content)
                         else:
-                            with open(f'pixiv/img/{ranking}/{folder_name}的作品/{n_name[-1]}','wb') as f:
+                            with open(f'./img/{ranking}/{folder_name}的作品/{n_name[-1]}','wb') as f:
                                 f.write(req.content)                    
         return 'DONE'
             
@@ -153,13 +153,13 @@ def dl_img(id:int or list,cfg:dict,search=None,ranking=None,r18mode=False,AllInO
         n_name = i.split("/")
         if AllInOneDir == True:
             req = requests.get(i,headers=headers)
-            with open(f'pixiv/img/{n_name[-1]}','wb') as f:
+            with open(f'./img/{n_name[-1]}','wb') as f:
                 f.write(req.content)
         else:
             req = requests.get(i,headers=headers)
             
             
-            with open(f'pixiv/img/{folder_name}的作品/{n_name[-1]}','wb') as f:
+            with open(f'./img/{folder_name}的作品/{n_name[-1]}','wb') as f:
                 f.write(req.content)
     return 'DONE'
 
