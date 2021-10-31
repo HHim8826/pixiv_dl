@@ -197,13 +197,13 @@ def pixiv_search(name:str,cfg:dict,mode=0) -> list:
     
     # with open("pixiv/jsondata.json",'w') as f:
     #     f.write(q.text.encode().decode('unicode_escape').replace(r'\/',r'/'))     
-        
-    for i in class_json:
+    # print(req,url)   
+    for json_tage in class_json:
         try:
             # get id
     
-            body_data = req['body'][i]['data']
-            data_long = len(req['body'][i]['data'])
+            body_data = req['body']['illust']['data']
+            data_long = len(body_data)
             for i in range(data_long):
                 id_num = body_data[i]['id']
                 userName = body_data[i]['userName']
@@ -211,11 +211,13 @@ def pixiv_search(name:str,cfg:dict,mode=0) -> list:
                 userName = userName.replace(r"*",'')
                 userName = userName.replace(r"/",'')
                 id_list.append([id_num,userName])
-
-                
+                          
         except KeyError:
-            # get id
-            body_data = req['body'][i]['recent']
+
+            # print(json_tage)
+            
+            body_data = req['body']['popular']['permanent']
+            
             id_long = len(body_data)
             # print(id_long)
             for num in range(id_long): 
@@ -227,7 +229,7 @@ def pixiv_search(name:str,cfg:dict,mode=0) -> list:
                 id_list.append([id_num,userName])
             
                      
-            body_data_1 = req['body'][i]['permanent']
+            body_data_1 = req['body']['popular']['recent']
             id_long_2 = len(body_data_1)
             # print(id_long_2)
             for num_2 in range(id_long_2):
@@ -236,8 +238,7 @@ def pixiv_search(name:str,cfg:dict,mode=0) -> list:
                 userName_2 = userName.replace(r"\u0027",'')
                 userName_2 = userName.replace(r"*",'')
                 userName_2 = userName.replace(r"/",'')
-                id_list.append([id_num_2,userName_2])
-             
+                id_list.append([id_num_2,userName_2])    
     search = name
     return id_list,search
 
