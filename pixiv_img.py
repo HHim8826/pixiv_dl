@@ -195,6 +195,7 @@ def pixiv_search(name:str,cfg:dict) -> list:
                 userName = i['userName']
                 userName = userName.replace(r"\u0027",'')
                 userName = userName.replace(r"*",'')
+                userName = userName.replace(r"/",'')
                 id_list.append([id_num,userName])
     
 
@@ -208,6 +209,7 @@ def pixiv_search(name:str,cfg:dict) -> list:
                 userName = body_deta[num]['userName']
                 userName = userName.replace(r"\u0027",'')
                 userName = userName.replace(r"*",'')
+                userName = userName.replace(r"/",'')
                 id_list.append([id_num,userName])
             
                      
@@ -219,6 +221,7 @@ def pixiv_search(name:str,cfg:dict) -> list:
                 userName_2 = body_deta_1[num_2]['userName'] 
                 userName_2 = userName.replace(r"\u0027",'')
                 userName_2 = userName.replace(r"*",'')
+                userName_2 = userName.replace(r"/",'')
                 id_list.append([id_num_2,userName_2])
              
     search = name
@@ -271,6 +274,9 @@ def ranking(page:int, cfg:dict,mode_num=0,r18mode=0):
         for len_data in range(times):
             id_num = json_data[len_data]['illust_id']
             userName = json_data[len_data]['user_name']
+            userName = userName.replace(r"\u0027",'')
+            userName = userName.replace(r"*",'')
+            userName = userName.replace(r"/",'')
             id_name_list.append([id_num,userName])
     
     if mode_num == 6:
