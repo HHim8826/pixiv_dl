@@ -164,23 +164,35 @@ def dl_img(id:int or list,cfg:dict,search=None,ranking=None,r18mode=False,AllInO
     return 'DONE'
 
 # get id list
-def pixiv_search(name:str,cfg:dict) -> list:
+def pixiv_search(name:str,cfg:dict,mode=0) -> list:
     # cookie == None ?
-    if cfg['login']['cookie'] != "":
-        # is login
-        class_json = ['illustManga','popular']
-    else:
-        class_json = ['illust','popular']   
+    class_json = ['illust','popular']   
     
     headers = {'referer' : "https://www.pixiv.net/",'cookie' : f"{cfg['login']['cookie']}",'user-agent': "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/95.0.4638.54 Safari/537.36"}
     
     # save data
     id_list = []
-    url = f'https://www.pixiv.net/ajax/search/top/{name}'
+    # https://www.pixiv.net/ajax/search/illustrations/甘雨(原神)?word=甘雨(原神)&order=date_d&mode=all&p=1&s_mode=s_tag_full&type=illust_and_ugoira&lang=zh_tw
+    url = f'https://www.pixiv.net/ajax/search/illustrations/{name}'
     
-    req = requests.get(url,headers=headers)
+    if mode == 0:
+        params = {
+            'word' : name,
+            'mode' : 'all'
+        }
+    elif mode == 1:
+        params = {
+            'word' : name,
+            'mode' : 'safe'
+        }
+    elif mode == 2:
+        params = {
+            'word' : name,
+            'mode' : 'r18'
+        }
+    
+    req = requests.get(url,headers=headers,params=params)
     # q= req
-    
     req = req.json()
     
     # with open("pixiv/jsondata.json",'w') as f:
@@ -189,36 +201,38 @@ def pixiv_search(name:str,cfg:dict) -> list:
     for i in class_json:
         try:
             # get id
-            body_deta = req['body'][i]['data']
-            for i in body_deta:
-                id_num = i['id']
-                userName = i['userName']
+    
+            body_data = req['body'][i]['data']
+            data_long = len(req['body'][i]['data'])
+            for i in range(data_long):
+                id_num = body_data[i]['id']
+                userName = body_data[i]['userName']
                 userName = userName.replace(r"\u0027",'')
                 userName = userName.replace(r"*",'')
                 userName = userName.replace(r"/",'')
                 id_list.append([id_num,userName])
-    
 
+                
         except KeyError:
             # get id
-            body_deta = req['body'][i]['recent']
-            id_long = len(body_deta)
+            body_data = req['body'][i]['recent']
+            id_long = len(body_data)
             # print(id_long)
             for num in range(id_long): 
-                id_num = body_deta[num]['id']
-                userName = body_deta[num]['userName']
+                id_num = body_data[num]['id']
+                userName = body_data[num]['userName']
                 userName = userName.replace(r"\u0027",'')
                 userName = userName.replace(r"*",'')
                 userName = userName.replace(r"/",'')
                 id_list.append([id_num,userName])
             
                      
-            body_deta_1 = req['body'][i]['permanent']
-            id_long_2 = len(body_deta_1)
+            body_data_1 = req['body'][i]['permanent']
+            id_long_2 = len(body_data_1)
             # print(id_long_2)
             for num_2 in range(id_long_2):
-                id_num_2 = body_deta_1[num_2]['id']
-                userName_2 = body_deta_1[num_2]['userName'] 
+                id_num_2 = body_data_1[num_2]['id']
+                userName_2 = body_data_1[num_2]['userName'] 
                 userName_2 = userName.replace(r"\u0027",'')
                 userName_2 = userName.replace(r"*",'')
                 userName_2 = userName.replace(r"/",'')
@@ -315,7 +329,10 @@ def main():
         dl_img(int(input('Pixiv_id:')),cfg)
     elif mode == 1: #search mode
         cfg = config_pixiv()
-        id_list , search_name = pixiv_search(input("Search:"),cfg)
+        search = input("Search:")
+        print('0:All\n1:Safe\n2:R18')
+        mode_num = int(input('mode:'))
+        id_list , search_name = pixiv_search(search,cfg,mode=mode_num)
         dl_img(id_list,cfg,search_name)
     elif mode == 2: #ranking mode?
         cfg = config_pixiv()
