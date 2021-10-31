@@ -1,2 +1,4 @@
 [login]
 cookie = ""
+[path]
+AllInOnePath = false
