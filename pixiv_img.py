@@ -105,11 +105,11 @@ def dl_img(id:int or list,cfg:dict,search=None,ranking=None,r18mode=False,AllInO
     headers = {'referer' : "https://www.pixiv.net/",'cookie' : f"{cfg['login']['cookie']}",'user-agent': "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/95.0.4638.54 Safari/537.36"}
     # 判斷 id 是否列表
     if type(id) == list:
-        for i in id:               
+        for i in tqdm(id):               
             # get json data
             data_json = pixiv_get(i[0],cfg)           
             if AllInOneDir == True:
-                for url in tqdm(data_json):
+                for url in data_json:
                     url = url['urls']['original']
                     re_name = url.split("/")
                     req = requests.get(url,headers=headers)
@@ -126,7 +126,7 @@ def dl_img(id:int or list,cfg:dict,search=None,ranking=None,r18mode=False,AllInO
                         mark_dir(folder_name,ranking=ranking,r18mode=True)
                     else:
                         mark_dir(folder_name,ranking=ranking)   
-                for iter1 in tqdm(data_json):
+                for iter1 in data_json:
                     # get original url
                     iter1 = iter1['urls']['original']
                     # get file name
