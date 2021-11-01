@@ -322,26 +322,24 @@ def get_user(id:int) -> str:
     name = name.replace(r"/",'')
     return name    
     
-def main():
+def main():   
+    cfg = config_pixiv()
+    AllInOneDir = cfg['path']['AllInOnePath']
     print('0:Pixiv_id mode\n1:Search mode\n2:ranking mode')
     mode = int(input('Mode:'))
-    if mode == 0: #id mode
-        cfg = config_pixiv()
+    if mode == 0: #id mode       
         dl_img(int(input('Pixiv_id:')),cfg)
-    elif mode == 1: #search mode
-        cfg = config_pixiv()
+    elif mode == 1: #search mode       
         search = input("Search:")
-        print('0:All\n1:Safe\n2:R18')
+        print('0:All\n1:Safe\n2:R18(login)')
         mode_num = int(input('mode:'))
         id_list , search_name = pixiv_search(search,cfg,mode=mode_num)
         dl_img(id_list,cfg,search_name)
     elif mode == 2: #ranking mode?
-        cfg = config_pixiv()
         # ['daily','weekly','monthly','rookie','original','female','daily_r18','male']
         page = int(input('Page:'))
         print('0:daily\n1:weekly\n2:monthly\n3:rookie\n4:original\n5:for female\n6:daily_r18(login)\n7:for male')
         ranking_num = int(input('ranking_mode:'))
-        AllInOneDir = cfg['path']['AllInOnePath']
         if ranking_num == 6:
             try:
                 print('0:daily_r18\n1:weekly_r18\n2:male_r18\n3:female_r18')
