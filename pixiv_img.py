@@ -328,13 +328,13 @@ def main():
     print('0:Pixiv_id mode\n1:Search mode\n2:ranking mode')
     mode = int(input('Mode:'))
     if mode == 0: #id mode       
-        dl_img(int(input('Pixiv_id:')),cfg)
+        dl_img(int(input('Pixiv_id:')),cfg,AllInOneDir=AllInOneDir)
     elif mode == 1: #search mode       
         search = input("Search:")
         print('0:All\n1:Safe\n2:R18(login)')
         mode_num = int(input('mode:'))
         id_list , search_name = pixiv_search(search,cfg,mode=mode_num)
-        dl_img(id_list,cfg,search_name)
+        dl_img(id_list,cfg,search_name,AllInOneDir=AllInOneDir)
     elif mode == 2: #ranking mode?
         # ['daily','weekly','monthly','rookie','original','female','daily_r18','male']
         page = int(input('Page:'))
@@ -371,6 +371,7 @@ if __name__ == '__main__':
     try:
         main()
     except KeyboardInterrupt:
-        exit('\nexit. . .')
+        exit('\nKeyboardInterrupt exit. . .')
     # mark_dir('a','b')
+
 
