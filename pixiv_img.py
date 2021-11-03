@@ -70,10 +70,8 @@ def mark_dir(name:str,search=None,ranking=None,r18mode=False):
         try:
             os.makedirs(path)
         except FileExistsError:
-            pass   
-    
-    
-    elif search == None:    
+            pass    
+    elif search == None:   
         path = f'./img/{name}的作品'
         try:
             os.makedirs(path)
@@ -125,7 +123,9 @@ def dl_img(id:int or list,cfg:dict,search=None,ranking=None,r18mode=False,AllInO
                     if r18mode == True:
                         mark_dir(folder_name,ranking=ranking,r18mode=True)
                     else:
-                        mark_dir(folder_name,ranking=ranking)   
+                        mark_dir(folder_name,ranking=ranking) 
+                elif search == None:
+                     mark_dir(folder_name)
                 for iter1 in data_json:
                     # get original url
                     iter1 = iter1['urls']['original']
@@ -142,12 +142,14 @@ def dl_img(id:int or list,cfg:dict,search=None,ranking=None,r18mode=False,AllInO
                                 f.write(req.content)
                         else:
                             with open(f'./img/{ranking}/{folder_name}的作品/{n_name[-1]}','wb') as f:
-                                f.write(req.content)                    
+                                f.write(req.content)
+                    elif search == None:
+                        with open(f'./img/{folder_name}的作品/{n_name[-1]}','wb') as f:
+                            f.write(req.content)                 
         return 'DONE'
             
     folder_name = get_user(id)         
     data_json = pixiv_get(id,cfg)
-    mark_dir(folder_name)
     for i in tqdm(data_json):
         i = i['urls']['original']
         n_name = i.split("/")
@@ -156,6 +158,7 @@ def dl_img(id:int or list,cfg:dict,search=None,ranking=None,r18mode=False,AllInO
             with open(f'./img/{n_name[-1]}','wb') as f:
                 f.write(req.content)
         else:
+            mark_dir(folder_name)
             req = requests.get(i,headers=headers)
             
             
@@ -299,6 +302,28 @@ def ranking(page:int, cfg:dict,mode_num=0,r18mode=0):
     return id_name_list,mode
                 
 
+def get_user_illusts(user_id:int,cfg:dict):
+    id_list = []
+    headers = {'referer' : "https://www.pixiv.net/ranking.php",'cookie' : f"{cfg['login']['cookie']}",'user-agent': "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/95.0.4638.54 Safari/537.36",'Content-Type': 'application/json'}
+    url = f'https://www.pixiv.net/ajax/user/{user_id}/profile/all'
+    user_url = f'https://www.pixiv.net/ajax/user/{user_id}'
+    
+    req_user = requests.get(user_url,headers=headers)
+    req_user = req_user.json()
+    user_name = req_user['body']['name']
+
+    req = requests.get(url,headers=headers)
+    req = req.json()
+
+    for illusts_ids in req['body']['illusts']:
+        id_list.append([illusts_ids,user_name]) 
+        
+    return id_list
+
+    
+
+
+# id -> artid
 # get name for id mode
 def get_user(id:int) -> str:   
     url = f'https://www.pixiv.net/artworks/{id}'
@@ -325,7 +350,7 @@ def get_user(id:int) -> str:
 def main():   
     cfg = config_pixiv()
     AllInOneDir = cfg['path']['AllInOnePath']
-    print('0:Pixiv_id mode\n1:Search mode\n2:ranking mode')
+    print('0:Pixiv_id mode\n1:Search mode\n2:ranking mode\n3:user_illusts')
     mode = int(input('Mode:'))
     if mode == 0: #id mode       
         dl_img(int(input('Pixiv_id:')),cfg,AllInOneDir=AllInOneDir)
@@ -352,6 +377,12 @@ def main():
         else:
             id_name_list , mode_ranking = ranking(page,cfg,mode_num=ranking_num)           
             dl_img(id_name_list,cfg,ranking=mode_ranking,AllInOneDir=AllInOneDir)
+    elif mode == 3:
+        user_id = int(input('user_id:'))
+        id_list = get_user_illusts(user_id,cfg)
+        dl_img(id_list,cfg,AllInOneDir=AllInOneDir)
+        
+        
         
 
     # cfg = config_pixiv()
@@ -373,5 +404,3 @@ if __name__ == '__main__':
     except KeyboardInterrupt:
         exit('\nKeyboardInterrupt exit. . .')
     # mark_dir('a','b')
-
-
