@@ -292,6 +292,7 @@ def ranking(page:int, cfg:dict,mode_num=0,r18mode=0):
         for len_data in range(times):
             id_num = json_data[len_data]['illust_id']
             userName = json_data[len_data]['user_name']
+            userName = re.sub(r'\\"<>|:?','',userName)
             userName = userName.replace(r"\u0027",'')
             userName = userName.replace(r"*",'')
             userName = userName.replace(r"/",'')
@@ -300,7 +301,49 @@ def ranking(page:int, cfg:dict,mode_num=0,r18mode=0):
     if mode_num == 6:
         mode = 'daily_r18'
     return id_name_list,mode
-                
+           
+# https://www.pixiv.net/ajax/search/artworks/甘雨?word=甘雨&order=popular_d&mode=all&p=1&s_mode=s_tag&type=all
+#Need premium 
+def premium_search(name:str,order_num:int,mode_num:int,page_num:int,cfg:dict):
+    id_list = []
+    headers = {'referer' : "https://www.pixiv.net/ranking.php",'cookie' : f"{cfg['login']['cookie']}",'user-agent': "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/95.0.4638.54 Safari/537.36",'Content-Type': 'application/json'}
+    
+    order = ['popular_d','popular_male_d','popular_c_d']
+    mode = ['s_tag','safe','r18']
+    
+    for pages in range(page_num):   
+        
+        params = {
+            'word' : {name},
+            'order' : {order[order_num]},
+            'mode' : {mode[mode_num]},
+            'p' : {pages+1},
+            's_mode' : 's_tag',
+            'type' : 'all'
+        }
+        
+        url = f'https://www.pixiv.net/ajax/search/artworks/{name}'
+        req = requests.get(url,headers=headers,params=params)
+        
+        json_data = req.json()
+        data_long = len(json_data['body']['illustManga']['data'])
+        target_data = json_data['body']['illustManga']['data']
+        
+        for list_num in range(data_long):
+            illusts_id = target_data[list_num]['id']
+            
+            user_name = target_data[list_num]['userName']
+            user_name = re.sub(r'\\"<>|:?','',user_name)
+            user_name = user_name.replace(r"\u0027",'')
+            user_name = user_name.replace(r"*",'')
+            user_name = user_name.replace(r"/",'')
+            
+        
+            id_list.append([illusts_id,user_name])
+       
+    search = name        
+    return id_list,search
+
 
 def get_user_illusts(user_id:int,cfg:dict):
     id_list = []
@@ -319,8 +362,6 @@ def get_user_illusts(user_id:int,cfg:dict):
         id_list.append([illusts_ids,user_name]) 
         
     return id_list
-
-    
 
 
 # id -> artid
@@ -350,7 +391,7 @@ def get_user(id:int) -> str:
 def main():   
     cfg = config_pixiv()
     AllInOneDir = cfg['path']['AllInOnePath']
-    print('0:Pixiv_id mode\n1:Search mode\n2:ranking mode\n3:user_illusts')
+    print('0:Pixiv_id mode\n1:Search mode\n2:Ranking mode\n3:User illusts\n4:Premium search(Need premium)')
     mode = int(input('Mode:'))
     if mode == 0: #id mode       
         dl_img(int(input('Pixiv_id:')),cfg,AllInOneDir=AllInOneDir)
@@ -377,13 +418,21 @@ def main():
         else:
             id_name_list , mode_ranking = ranking(page,cfg,mode_num=ranking_num)           
             dl_img(id_name_list,cfg,ranking=mode_ranking,AllInOneDir=AllInOneDir)
-    elif mode == 3:
+    elif mode == 3: #get_user_illusts
         user_id = int(input('user_id:'))
         id_list = get_user_illusts(user_id,cfg)
         dl_img(id_list,cfg,AllInOneDir=AllInOneDir)
+    elif mode == 4: #premium_search
+        search = input("Search:")
+        print('0:All popular\n1:Popula for male\n2:Popula for Popula for')
+        order_num = int(input('order:'))
+        print('0:r18 & safe\n1:safe\n2:R18')
+        mode_4_num = int(input('mode:'))
+        pages = int(input('pages:'))
+        id_list , search_name = premium_search(search,order_num,mode_4_num,pages,cfg)
+        dl_img(id_list,cfg,search_name,AllInOneDir=AllInOneDir)
         
-        
-        
+            
 
     # cfg = config_pixiv()
     # print(cfg['login']['cookie'])
@@ -401,6 +450,7 @@ def main():
 if __name__ == '__main__': 
     try:
         main()
+        # pass
     except KeyboardInterrupt:
         exit('\nKeyboardInterrupt exit. . .')
     # mark_dir('a','b')
