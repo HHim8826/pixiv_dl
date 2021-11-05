@@ -308,7 +308,7 @@ def premium_search(name:str,order_num:int,mode_num:int,page_num:int,cfg:dict):
     id_list = []
     headers = {'referer' : "https://www.pixiv.net/ranking.php",'cookie' : f"{cfg['login']['cookie']}",'user-agent': "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/95.0.4638.54 Safari/537.36",'Content-Type': 'application/json'}
     
-    order = ['popular_d','popular_male_d','popular_c_d']
+    order = ['popular_d','popular_male_d','popular_female_d']
     mode = ['s_tag','safe','r18']
     
     for pages in range(page_num):   
@@ -424,7 +424,7 @@ def main():
         dl_img(id_list,cfg,AllInOneDir=AllInOneDir)
     elif mode == 4: #premium_search
         search = input("Search:")
-        print('0:All popular\n1:Popula for male\n2:Popula for Popula for')
+        print('0:All popular\n1:Popula for male\n2:Popula for female')
         order_num = int(input('order:'))
         print('0:r18 & safe\n1:safe\n2:R18')
         mode_4_num = int(input('mode:'))
@@ -432,8 +432,6 @@ def main():
         id_list , search_name = premium_search(search,order_num,mode_4_num,pages,cfg)
         dl_img(id_list,cfg,search_name,AllInOneDir=AllInOneDir)
         
-            
-
     # cfg = config_pixiv()
     # print(cfg['login']['cookie'])
     
@@ -450,7 +448,5 @@ def main():
 if __name__ == '__main__': 
     try:
         main()
-        # pass
     except KeyboardInterrupt:
         exit('\nKeyboardInterrupt exit. . .')
-    # mark_dir('a','b')
