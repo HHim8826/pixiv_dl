@@ -1,3 +1,12 @@
+banner = r'''                                                                                                                           
+  ___   _         _               _                                  
+ | _ \ (_) __ __ (_) __ __       (_)  _ __    __ _       _ __   _  _ 
+ |  _/ | | \ \ / | | \ V /       | | | '  \  / _` |  _  | '_ \ | || |
+ |_|   |_| /_\_\ |_|  \_/   ___  |_| |_|_|_| \__, | (_) | .__/  \_, |
+                           |___|             |___/      |_|     |__/ 
+'''
+
+
 #-*- coding: utf-8 -*
 import requests
 import os
@@ -330,7 +339,9 @@ def premium_search(name:str,order_num:int,mode_num:int,page_num:int,cfg:dict):
         target_data = json_data['body']['illustManga']['data']
         
         for list_num in range(data_long):
-            illusts_id = target_data[list_num]['id']
+            # print(target_data[0])
+            # print(data_long)
+            illusts_id = target_data[list_num]["id"]
             
             user_name = target_data[list_num]['userName']
             user_name = re.sub(r'\\"<>|:?','',user_name)
@@ -388,11 +399,14 @@ def get_user(id:int) -> str:
     name = name.replace(r"/",'')
     return name    
     
-def main():   
+def main():
+    os.system('cls')
+    print(banner) 
     cfg = config_pixiv()
     AllInOneDir = cfg['path']['AllInOnePath']
     print('0:Pixiv_id mode\n1:Search mode\n2:Ranking mode\n3:User illusts\n4:Premium search(Need premium)')
     mode = int(input('Mode:'))
+    print(f"Mode:{mode}".center(50,'='))
     if mode == 0: #id mode       
         dl_img(int(input('Pixiv_id:')),cfg,AllInOneDir=AllInOneDir)
     elif mode == 1: #search mode       
