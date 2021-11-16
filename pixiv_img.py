@@ -409,6 +409,8 @@ def main():
     print(f"Mode:{mode}".center(50,'='))
     if mode == 0: #id mode       
         dl_img(int(input('Pixiv_id:')),cfg,AllInOneDir=AllInOneDir)
+    elif mode > 10000:
+        dl_img(mode,cfg,AllInOneDir=AllInOneDir)
     elif mode == 1: #search mode       
         search = input("Search:")
         print('0:All\n1:Safe\n2:R18(login)')
