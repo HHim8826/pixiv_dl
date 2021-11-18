@@ -420,7 +420,7 @@ def main():
     elif mode == 2: #ranking mode?
         # ['daily','weekly','monthly','rookie','original','female','daily_r18','male']
         page = int(input('Page:'))
-        print('0:daily\n1:weekly\n2:monthly\n3:rookie\n4:original\n5:for female\n6:daily_r18(login)\n7:for male')
+        print('0:daily\n1:weekly\n2:monthly\n3:rookie\n4:original\n5:for female\n6:r18(login)\n7:for male')
         ranking_num = int(input('ranking_mode:'))
         if ranking_num == 6:
             try:
@@ -466,3 +466,5 @@ if __name__ == '__main__':
         main()
     except KeyboardInterrupt:
         exit('\nKeyboardInterrupt exit. . .')
+
+
