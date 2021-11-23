@@ -226,18 +226,14 @@ async def main():
         id_list = [id for id in ids]
         
     try:
+        st_time = time.time()
         for id in id_list:
             tasks.append(asyncio.create_task(dl_img(id,cfg)))
         await asyncio.wait(tasks)
+        print(f'總用時:{round(time.time() - st_time)}sec'.center(47,'='))
     except ValueError:
         pass
     
 
 if __name__ == "__main__":
-    st_time = time.time()
-    # with ThreadPoolExecutor(50) as th:
-    #     th.submit(asyncio.run,main())
     asyncio.run(main())
-    
-    print(f'總用時:{round(time.time() - st_time)}sec'.center(47,'='))
-
