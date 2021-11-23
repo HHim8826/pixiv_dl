@@ -1,4 +1,4 @@
-banner = r'''                                                                                                                           
+banner = '''                                                                                                                           
   ___   _         _               _                                  
  | _ \ (_) __ __ (_) __ __       (_)  _ __    __ _       _ __   _  _ 
  |  _/ | | \ \ / | | \ V /       | | | '  \  / _` |  _  | '_ \ | || |
@@ -12,8 +12,12 @@ import requests
 import os
 import re
 import toml
+import asyncio
+import aiofiles
+import aiohttp
 from tqdm import tqdm
 from json.decoder import JSONDecodeError
+from concurrent.futures import ThreadPoolExecutor
 # from pprint import pprint
 
 # get pixiv_cookie.toml
@@ -112,16 +116,17 @@ def dl_img(id:int or list,cfg:dict,search=None,ranking=None,r18mode=False,AllInO
     headers = {'referer' : "https://www.pixiv.net/",'cookie' : f"{cfg['login']['cookie']}",'user-agent': "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/95.0.4638.54 Safari/537.36"}
     # 判斷 id 是否列表
     if type(id) == list:
-        for i in tqdm(id):               
+        for i in tqdm(id):
             # get json data
-            data_json = pixiv_get(i[0],cfg)           
+            data_json = pixiv_get(i[0],cfg)
             if AllInOneDir == True:
-                for url in data_json:
-                    url = url['urls']['original']
-                    re_name = url.split("/")
-                    req = requests.get(url,headers=headers)
-                    with open(f'./img/{re_name[-1]}','wb') as f:
-                                f.write(req.content)           
+                    for url in data_json:
+                        url = url['urls']['original']
+                        re_name = url.split("/")[-1]
+                        # req = th.submit(requests.get,url,headers=headers)
+                        req = requests.get(url,headers=headers)
+                        with open(f'./img/{re_name}','wb') as f:
+                                    f.write(req.content)
             else:
                 # get folder name
                 folder_name = i[1]
@@ -306,6 +311,7 @@ def ranking(page:int, cfg:dict,mode_num=0,r18mode=0):
             userName = userName.replace(r"*",'')
             userName = userName.replace(r"/",'')
             id_name_list.append([id_num,userName])
+            # id_name_list.append(id_num)
     
     if mode_num == 6:
         mode = 'daily_r18'
@@ -335,6 +341,7 @@ def premium_search(name:str,order_num:int,mode_num:int,page_num:int,cfg:dict):
         req = requests.get(url,headers=headers,params=params)
         
         json_data = req.json()
+        print(json_data)
         data_long = len(json_data['body']['illustManga']['data'])
         target_data = json_data['body']['illustManga']['data']
         
@@ -368,7 +375,6 @@ def get_user_illusts(user_id:int,cfg:dict):
 
     req = requests.get(url,headers=headers)
     req = req.json()
-
     for illusts_ids in req['body']['illusts']:
         id_list.append([illusts_ids,user_name]) 
         
@@ -432,7 +438,11 @@ def main():
             except JSONDecodeError:
                 exit('未登錄 . . .')             
         else:
-            id_name_list , mode_ranking = ranking(page,cfg,mode_num=ranking_num)           
+            id_name_list , mode_ranking = ranking(page,cfg,mode_num=ranking_num)
+            # print(id_name_list)
+            # with ThreadPoolExecutor(30) as th:
+            #     for ids in id_name_list:
+            #         th.submit(dl_img,id=ids[0],cfg=cfg,ranking=mode_ranking,AllInOneDir=AllInOneDir)     
             dl_img(id_name_list,cfg,ranking=mode_ranking,AllInOneDir=AllInOneDir)
     elif mode == 3: #get_user_illusts
         user_id = int(input('user_id:'))
