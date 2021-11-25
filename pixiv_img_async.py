@@ -1,14 +1,11 @@
 #-*- coding: utf-8 -*
 import os
-from asyncio.queues import Queue
 import requests
 import toml
 import asyncio
 import aiohttp
 import aiofiles
 import time
-import threading
-import queue
 from concurrent.futures import ThreadPoolExecutor,as_completed
 
 banner = '''  _                                                       
