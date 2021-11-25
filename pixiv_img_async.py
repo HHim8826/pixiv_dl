@@ -1,12 +1,15 @@
 #-*- coding: utf-8 -*
 import os
+from asyncio.queues import Queue
 import requests
 import toml
 import asyncio
 import aiohttp
 import aiofiles
 import time
-from concurrent.futures import ThreadPoolExecutor
+import threading
+import queue
+from concurrent.futures import ThreadPoolExecutor,as_completed
 
 banner = '''  _                                                       
  |_)  o      o           /\    _      ._    _     ._      
@@ -105,7 +108,6 @@ def get_user_illusts(user_id,cfg:dict):
 def ranking(page:int, cfg:dict,mode_num=0,r18mode=0):
     headers = {'referer' : "https://www.pixiv.net/ranking.php",'cookie' : f"{cfg['login']['cookie']}",'user-agent': "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/95.0.4638.54 Safari/537.36",'Content-Type': 'application/json'}
     url = f'https://www.pixiv.net/ranking.php'
-    
     if mode_num == 0:
         mode = 'daily'
     elif mode_num == 1:
@@ -129,22 +131,27 @@ def ranking(page:int, cfg:dict,mode_num=0,r18mode=0):
             mode = 'female_r18'
     elif mode_num == 7:
         mode = 'male'
-    
-    
-
-    for page_num in range(page):
-        params = {
-            'p' : page_num+1,
-            'format' : 'json',
-            'mode' : mode
-        }
         
-        req = requests.get(url,headers=headers,params=params)
-        data = req.json()
-        json_data = data['contents']
-        for data_info in json_data:
-            id_num = data_info['illust_id']
-            yield id_num
+    with ThreadPoolExecutor(4) as th:
+        ids = []
+        th_ = []
+        for page_num in range(page):
+            params = {
+                'p' : page_num+1,
+                'format' : 'json',
+                'mode' : mode
+            }
+            reqs = th.submit(requests.get,url,headers=headers,params=params)
+            th_.append(reqs)
+
+        for req in as_completed(th_):
+            data = req.result().json()
+            json_data = data['contents']
+            for data_info in json_data:
+                id_num = data_info['illust_id']
+                ids.append(id_num)
+
+    return ids
 
 
 async def pixiv_get(id,cfg:dict):
@@ -203,7 +210,7 @@ async def main():
         else:
             ids = ranking(page,cfg,mode_num=ranking_num)
             
-        id_list = [id for id in ids]
+        id_list = ids
         
     elif mode == 3:
         user_id = int(input('user_id:'))
