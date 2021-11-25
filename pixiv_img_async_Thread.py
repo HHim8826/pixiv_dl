@@ -2,9 +2,8 @@
 import os
 import requests
 import toml
-import asyncio
-import aiohttp
-import aiofiles
+
+
 import time
 from concurrent.futures import ThreadPoolExecutor
 
@@ -164,8 +163,8 @@ def dl_img(id,cfg:dict):
         with open(f'./img/{name}','wb') as f:
             f.write(req.content)
 
-async def main():
-    os.system('cls')
+def main():
+
     print(banner)
     cfg = get_config()
     print('0:Pixiv_id mode\n1:Search mode\n2:Ranking mode\n3:User illusts\n4:Premium search(Need premium)')
@@ -224,8 +223,12 @@ async def main():
         id_list = [id for id in ids]
         
     with ThreadPoolExecutor(50) as th:
+      
+        st_time = time.time()
         for ids in id_list:
-            th.submit(dl_img,ids,cfg)     
+            th.submit(dl_img,ids,cfg)
+        print(f'總用時:{round(time.time() - st_time)}sec'.center(50,'='))
+       
     
     # try:
     #     for id in id_list:
@@ -236,12 +239,10 @@ async def main():
     
 
 if __name__ == "__main__":
-    st_time = time.time()
     # with ThreadPoolExecutor(50) as th:
     #     th.submit(asyncio.run,main())
-    asyncio.run(main())
-    print(f'總用時:{round(time.time() - st_time)}sec'.center(50,'='))
+    main()
     
     
     
-
+  
