@@ -4,6 +4,6 @@
 pip install requests
 pip install tqdm 
 pip install aiohttp 
-pip install aiofile
+pip install aiofiles
 ```
 
