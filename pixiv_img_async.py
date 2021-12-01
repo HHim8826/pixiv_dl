@@ -6,6 +6,7 @@ import asyncio
 import aiohttp
 import aiofiles
 import time
+from tqdm import tqdm
 from concurrent.futures import ThreadPoolExecutor,as_completed
 
 banner = '''  _                                                       
@@ -158,7 +159,7 @@ async def pixiv_get(id,cfg:dict,session):
         data = await req.json()
         return data['body']
 
-async def dl_img(id,cfg:dict,session):
+async def dl_img(id,cfg:dict,session,pbar):
     headers = {'referer' : "https://www.pixiv.net/",'cookie' : f"{cfg['login']['cookie']}",'user-agent': "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/95.0.4638.54 Safari/537.36"}
     data = await pixiv_get(id,cfg,session)
     for data_info in data:
@@ -167,6 +168,7 @@ async def dl_img(id,cfg:dict,session):
         async with session.get(img_url,headers=headers) as req:
             async with aiofiles.open(f'./img/{name}','wb') as aiof:
                 await aiof.write(await req.content.read())
+    pbar.update(1)
 
 async def main():
     os.system('cls')
@@ -229,10 +231,11 @@ async def main():
         
     try:
         st_time = time.time()
-        async with aiohttp.ClientSession() as session:
-            for id in id_list:
-                tasks.append(asyncio.create_task(dl_img(id,cfg,session)))
-            await asyncio.wait(tasks)
+        with tqdm(total=len(id_list)) as pbar:
+            async with aiohttp.ClientSession() as session:
+                for id in id_list:
+                    tasks.append(asyncio.create_task(dl_img(id,cfg,session,pbar)))
+                await asyncio.wait(tasks)
         print(f'總用時:{round(time.time() - st_time)}sec'.center(47,'='))
     except ValueError:
         pass
