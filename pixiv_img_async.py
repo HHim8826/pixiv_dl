@@ -103,9 +103,10 @@ def get_user_illusts(user_id,cfg:dict):
     for illusts_ids in req['body']['illusts']:   
         yield illusts_ids
 
-def ranking(page:int, cfg:dict,mode_num=0,r18mode=0):
+def ranking(page:int, cfg:dict,mode_num=0,r18mode=0,only_illust=False):
     headers = {'referer' : "https://www.pixiv.net/ranking.php",'cookie' : f"{cfg['login']['cookie']}",'user-agent': "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/95.0.4638.54 Safari/537.36",'Content-Type': 'application/json'}
     url = f'https://www.pixiv.net/ranking.php'
+    
     if mode_num == 0:
         mode = 'daily'
     elif mode_num == 1:
@@ -129,6 +130,8 @@ def ranking(page:int, cfg:dict,mode_num=0,r18mode=0):
             mode = 'female_r18'
     elif mode_num == 7:
         mode = 'male'
+    
+
         
     with ThreadPoolExecutor(4) as th:
         ids = []
@@ -139,6 +142,16 @@ def ranking(page:int, cfg:dict,mode_num=0,r18mode=0):
                 'format' : 'json',
                 'mode' : mode
             }
+            if mode == 'daily' or 'weekly' or 'monthly' or 'rookie' and only_illust == True:
+                params = {
+                    'p' : page_num+1,
+                    'format' : 'json',
+                    'mode' : mode,
+                    'content' : 'illust'
+                }
+                reqs = th.submit(requests.get,url,headers=headers,params=params)
+                th_.append(reqs)
+                continue
             reqs = th.submit(requests.get,url,headers=headers,params=params)
             th_.append(reqs)
 
@@ -199,7 +212,13 @@ async def main():
         print("".center(50,'='))
         page = int(input('Page:'))
         print("".center(50,'='))
-        if ranking_num == 6:
+        
+        if ranking_num == 0 or 1 or 2 or 3:
+            on_illust = input('Only illustration[y/n]:')
+            if on_illust == 'y':
+                ids = ranking(page,cfg,mode_num=ranking_num,only_illust=True)
+                print("".center(50,'='))
+        elif ranking_num == 6:
             print('0:daily_r18\n1:weekly_r18\n2:male_r18\n3:female_r18')
             r18mode = int(input("R18_mode:"))
             print("".center(50,'='))
