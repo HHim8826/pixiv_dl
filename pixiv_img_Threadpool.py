@@ -3,7 +3,8 @@ import os
 import requests
 import toml
 import time
-from concurrent.futures import ThreadPoolExecutor
+from tqdm import tqdm
+from concurrent.futures import ThreadPoolExecutor,as_completed
 
 banner = '''  _                                                       
  |_)  o      o           /\    _      ._    _     ._      
@@ -219,12 +220,17 @@ def main():
         print("".center(50,'='))
         ids = premium_search(search,order_num,mode_4_num,pages,cfg)
         id_list = [id for id in ids]
-        
+    
     with ThreadPoolExecutor(50) as th:
-      
+        _th = []
         st_time = time.time()
         for ids in id_list:
-            th.submit(dl_img,ids,cfg)
+            sub = th.submit(dl_img,ids,cfg)
+            _th.append(sub)
+            
+        for ths in tqdm(as_completed(_th),total=len(_th)):
+            pass
+
         print(f'總用時:{round(time.time() - st_time)}sec'.center(50,'='))
        
     
@@ -240,7 +246,3 @@ if __name__ == "__main__":
     # with ThreadPoolExecutor(50) as th:
     #     th.submit(asyncio.run,main())
     main()
-    
-    
-    
-  
