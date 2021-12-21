@@ -195,8 +195,7 @@ async def main():
     tasks = []
     
     if mode == 0:
-        await dl_img(int(input('Pixiv_id:')),cfg) 
-            
+        id_list.append(int(input('Pixiv_id:')))
     elif mode == 1:
         search = input("Search:")
         print("".center(50,'='))
