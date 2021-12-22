@@ -12,19 +12,27 @@ import requests
 import os
 import re
 import toml
-import asyncio
-import aiofiles
-import aiohttp
 from tqdm import tqdm
 from json.decoder import JSONDecodeError
-from concurrent.futures import ThreadPoolExecutor
-# from pprint import pprint
 
 # get pixiv_cookie.toml
 def config_pixiv():
     cfg = toml.load(os.path.expanduser('./pixiv_cookie.toml'))       
     return cfg
-    
+
+def name_replace(str):
+    str = str.replace(r"\u0027",'')
+    str = str.replace(r'\\',"")
+    str = str.replace(r"/",'')
+    str = str.replace(r":",'')
+    str = str.replace(r"*",'')
+    str = str.replace(r"?",'')
+    str = str.replace(r'"','')
+    str = str.replace(r"<",'')
+    str = str.replace(r">",'')
+    str = str.replace(r"|",'')
+    return str
+
 # mark folder
 def mark_dir(name:str,search=None,ranking=None,r18mode=False):
     if ranking == 'daily':
@@ -223,10 +231,9 @@ def pixiv_search(name:str,cfg:dict,mode=0) -> list:
             data_long = len(body_data)
             for i in range(data_long):
                 id_num = body_data[i]['id']
-                userName = body_data[i]['userName']
-                userName = userName.replace(r"\u0027",'')
-                userName = userName.replace(r"*",'')
-                userName = userName.replace(r"/",'')
+                userName = body_data[i]['userName'] 
+                          
+                userName = name_replace(userName)
                 id_list.append([id_num,userName])
                           
         except KeyError:
@@ -240,9 +247,8 @@ def pixiv_search(name:str,cfg:dict,mode=0) -> list:
             for num in range(id_long): 
                 id_num = body_data[num]['id']
                 userName = body_data[num]['userName']
-                userName = userName.replace(r"\u0027",'')
-                userName = userName.replace(r"*",'')
-                userName = userName.replace(r"/",'')
+
+                userName = name_replace(userName)
                 id_list.append([id_num,userName])
             
                      
@@ -252,9 +258,8 @@ def pixiv_search(name:str,cfg:dict,mode=0) -> list:
             for num_2 in range(id_long_2):
                 id_num_2 = body_data_1[num_2]['id']
                 userName_2 = body_data_1[num_2]['userName'] 
-                userName_2 = userName.replace(r"\u0027",'')
-                userName_2 = userName.replace(r"*",'')
-                userName_2 = userName.replace(r"/",'')
+
+                userName_2 = name_replace(userName_2)
                 id_list.append([id_num_2,userName_2])    
     search = name
     return id_list,search
@@ -306,10 +311,8 @@ def ranking(page:int, cfg:dict,mode_num=0,r18mode=0):
         for len_data in range(times):
             id_num = json_data[len_data]['illust_id']
             userName = json_data[len_data]['user_name']
-            userName = re.sub(r'\\"<>|:?','',userName)
-            userName = userName.replace(r"\u0027",'')
-            userName = userName.replace(r"*",'')
-            userName = userName.replace(r"/",'')
+            
+            userName = name_replace(userName)
             id_name_list.append([id_num,userName])
             # id_name_list.append(id_num)
     
@@ -351,12 +354,8 @@ def premium_search(name:str,order_num:int,mode_num:int,page_num:int,cfg:dict):
             illusts_id = target_data[list_num]["id"]
             
             user_name = target_data[list_num]['userName']
-            user_name = re.sub(r'\\"<>|:?','',user_name)
-            user_name = user_name.replace(r"\u0027",'')
-            user_name = user_name.replace(r"*",'')
-            user_name = user_name.replace(r"/",'')
-            
-        
+            userName = name_replace(userName)
+                    
             id_list.append([illusts_id,user_name])
        
     search = name        
@@ -398,11 +397,7 @@ def get_user(id:int) -> str:
         name =  it.group('name')
     
     # del非法字符
-    name = re.sub(r'\\"<>|:?','',name)
-    # ' == \u0027
-    name = name.replace(r"\u0027",'')
-    name = name.replace(r"*",'')
-    name = name.replace(r"/",'')
+    name = name_replace(name)
     return name    
     
 def main():
@@ -476,5 +471,3 @@ if __name__ == '__main__':
         main()
     except KeyboardInterrupt:
         exit('\nKeyboardInterrupt exit. . .')
-
-
