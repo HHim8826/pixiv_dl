@@ -217,6 +217,8 @@ async def main():
             if on_illust == 'y':
                 ids = ranking(page,cfg,mode_num=ranking_num,only_illust=True)
                 print("".center(50,'='))
+            else:
+                ids = ranking(page,cfg,mode_num=ranking_num)
         elif ranking_num == 6:
             print('0:daily_r18\n1:weekly_r18\n2:male_r18\n3:female_r18')
             r18mode = int(input("R18_mode:"))
