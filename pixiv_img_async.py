@@ -9,6 +9,7 @@ import time
 from tqdm import tqdm
 from concurrent.futures import ThreadPoolExecutor,as_completed
 
+
 banner = '''  _                                                       
  |_)  o      o           /\    _      ._    _     ._      
  |    |  ><  |  \/      /--\  _>  \/  | |  (_  o  |_)  \/ 
@@ -19,23 +20,28 @@ def get_config():
     cfg = toml.load(os.path.expanduser('./pixiv_cookie.toml'))
     return cfg
 
-def premium_search(name:str,order_num:int,mode_num:int,page_num:int,cfg:dict):
+def premium_search(name:str,order_num:int,mode_num:int,page_num:int,cfg:dict,only_illust=True):
     headers = {'referer' : "https://www.pixiv.net/ranking.php",'cookie' : f"{cfg['login']['cookie']}",'user-agent': "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/95.0.4638.54 Safari/537.36",'Content-Type': 'application/json'}
     
     order = ['popular_d','popular_male_d','popular_female_d']
     mode = ['s_tag','safe','r18']
+
+    params = {
+        'word' : {name},
+        'order' : {order[order_num]},
+        'mode' : {mode[mode_num]},
+        's_mode' : 's_tag',
+    }
+
+    if only_illust:
+        params['type'] = 'illust_and_ugoira'
+    else:
+        params['type'] = 'all'
     
-    for pages in range(page_num):   
+    for pages in range(page_num):
         
-        params = {
-            'word' : {name},
-            'order' : {order[order_num]},
-            'mode' : {mode[mode_num]},
-            'p' : {pages+1},
-            's_mode' : 's_tag',
-            'type' : 'all'
-        }
-        
+        params['p'] = pages+1
+     
         url = f'https://www.pixiv.net/ajax/search/artworks/{name}'
         req = requests.get(url,headers=headers,params=params)
         
@@ -246,7 +252,12 @@ async def main():
         print("".center(50,'='))
         pages = int(input('pages:'))
         print("".center(50,'='))
-        ids = premium_search(search,order_num,mode_4_num,pages,cfg)
+        only_illust = input('only_illust[y/n]:')
+        print("".center(50,'='))
+        if only_illust == 'n':
+            ids = premium_search(search,order_num,mode_4_num,pages,cfg,only_illust=False)
+        else:
+            ids = premium_search(search,order_num,mode_4_num,pages,cfg)
         id_list = [id for id in ids]
         
     try:
@@ -262,4 +273,7 @@ async def main():
     
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    try:
+        asyncio.run(main())
+    except ValueError:
+        print("non login")
