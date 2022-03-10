@@ -58,24 +58,16 @@ def pixiv_search(name:str,cfg:dict,mode=0) -> list:
     
     url = f'https://www.pixiv.net/ajax/search/illustrations/{name}'
     
-    if mode == 0:
-        params = {
-            'word' : name,
-            'mode' : 'all'
-        }
-    elif mode == 1:
-        params = {
-            'word' : name,
-            'mode' : 'safe'
-        }
-    elif mode == 2:
-        params = {
-            'word' : name,
-            'mode' : 'r18'
-        }
+    params = {'word' : name}
     
+    if mode == 0:
+            params['mode'] = 'all'
+    elif mode == 1:
+            params['mode'] = 'safe'
+    elif mode == 2:
+            params['mode'] = 'r18'
+
     req = requests.get(url,headers=headers,params=params)
-    # q= req
     req = req.json()
      
     try:
@@ -137,27 +129,19 @@ def ranking(page:int, cfg:dict,mode_num=0,r18mode=0,only_illust=False):
     elif mode_num == 7:
         mode = 'male'
     
+    params = {
+        'format' : 'json',
+        'mode' : mode
+    }
+    
+    if mode == 'daily' or 'weekly' or 'monthly' or 'rookie' and only_illust:
+        params['content'] = 'illust'
 
-        
     with ThreadPoolExecutor(4) as th:
         ids = []
         th_ = []
         for page_num in range(page):
-            params = {
-                'p' : page_num+1,
-                'format' : 'json',
-                'mode' : mode
-            }
-            if mode == 'daily' or 'weekly' or 'monthly' or 'rookie' and only_illust == True:
-                params = {
-                    'p' : page_num+1,
-                    'format' : 'json',
-                    'mode' : mode,
-                    'content' : 'illust'
-                }
-                reqs = th.submit(requests.get,url,headers=headers,params=params)
-                th_.append(reqs)
-                continue
+            params['p'] = page_num+1
             reqs = th.submit(requests.get,url,headers=headers,params=params)
             th_.append(reqs)
 
@@ -273,7 +257,4 @@ async def main():
     
 
 if __name__ == "__main__":
-    try:
-        asyncio.run(main())
-    except ValueError:
-        print("non login")
+    asyncio.run(main())
