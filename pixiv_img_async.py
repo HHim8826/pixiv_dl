@@ -103,7 +103,7 @@ def get_user_illusts(user_id,cfg:dict):
     for illusts_ids in req['body']['illusts']:   
         yield illusts_ids
 
-async def popular_search(search_name:str, bookmark:int, cfg:dict, page=100, mode=0):
+async def popular_search(search_name:str, bookmark:int, cfg:dict, page=150, mode=0):
     headers = {'referer' : "https://www.pixiv.net",'cookie' : f"{cfg['login']['cookie']}",'user-agent': "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/95.0.4638.54 Safari/537.36",'Content-Type': 'application/json'}
     url = f'https://www.pixiv.net/ajax/search/illustrations/{search_name}'
     id_list = []
@@ -128,7 +128,7 @@ async def popular_search(search_name:str, bookmark:int, cfg:dict, page=100, mode
     
     if page > max_page:
         page = max_page
-        
+    
     with ThreadPoolExecutor(50) as th:
         th_ = []
         th2_ = []
@@ -139,7 +139,8 @@ async def popular_search(search_name:str, bookmark:int, cfg:dict, page=100, mode
             reqs = th.submit(requests.get,url,headers=headers,params=payload)
             th_.append(reqs)
 
-        for req in as_completed(th_):
+        print(f'正在獲得前{page}頁的作品. . .')
+        for req in tqdm(as_completed(th_),total=len(th_)):
             json_data = req.result().json()
             data = json_data['body']['illust']['data']
             for id_ in data:
@@ -150,7 +151,8 @@ async def popular_search(search_name:str, bookmark:int, cfg:dict, page=100, mode
             illust_reqs = th.submit(requests.get,illust_url,headers=headers)
             th2_.append(illust_reqs)
         
-        for illust_req in as_completed(th2_):
+        print(f'正在獲得所有作品({len(th2_)}件)的點讚量. . .')
+        for illust_req in tqdm(as_completed(th2_),total=len(th2_)):
             json_data = illust_req.result().json()
             if json_data['body']['bookmarkCount'] > bookmark:
                 dl_list.append(json_data['body']['urls']['original'])
@@ -159,7 +161,8 @@ async def popular_search(search_name:str, bookmark:int, cfg:dict, page=100, mode
             dl_reqs = th.submit(requests.get,dl_url,headers=headers)
             th3_.append(dl_reqs)
         
-        for dl_req in as_completed(th3_):
+        print(f'正在下載超過{bookmark}點讚的作品,共({len(th3_)}件)作品. . .')
+        for dl_req in tqdm(as_completed(th3_),total=len(th3_)):
             img_data = dl_req.result()
             file_name = img_data.request.url.split('/')[-1]
             content_data = img_data.content
