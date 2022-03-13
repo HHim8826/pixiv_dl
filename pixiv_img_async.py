@@ -319,7 +319,7 @@ async def main():
         collection = int(input("collection:"))
         print("".center(50,'='))
         print('0:All\n1:Safe\n2:R18(login)')
-        r18mode = int(input("R18_mode:"))
+        r18mode = int(input("Mode:"))
         st_time = time.time()
         await popular_search(search,collection,cfg,mode=r18mode)
         print(f'總用時:{round(time.time() - st_time)}sec'.center(47,'='))
