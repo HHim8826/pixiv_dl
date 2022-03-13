@@ -10,6 +10,8 @@
 3:User illusts
 4:Premium search(Need premium)
 5:popular_search(non premium)
+Mode:5
+======================Mode:5======================
 Search:████████████
 ==================================================
 collection:1500
