@@ -2,6 +2,7 @@
 import os
 import requests
 import toml
+import math
 import asyncio
 import aiohttp
 import aiofiles
@@ -19,6 +20,7 @@ banner = '''  _
 def get_config():
     cfg = toml.load(os.path.expanduser('./pixiv_cookie.toml'))
     return cfg
+
 
 def premium_search(name:str,order_num:int,mode_num:int,page_num:int,cfg:dict,only_illust=True):
     headers = {'referer' : "https://www.pixiv.net/ranking.php",'cookie' : f"{cfg['login']['cookie']}",'user-agent': "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/95.0.4638.54 Safari/537.36",'Content-Type': 'application/json'}
@@ -101,6 +103,70 @@ def get_user_illusts(user_id,cfg:dict):
     for illusts_ids in req['body']['illusts']:   
         yield illusts_ids
 
+async def popular_search(search_name:str, bookmark:int, cfg:dict, page=100, mode=0):
+    headers = {'referer' : "https://www.pixiv.net",'cookie' : f"{cfg['login']['cookie']}",'user-agent': "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/95.0.4638.54 Safari/537.36",'Content-Type': 'application/json'}
+    url = f'https://www.pixiv.net/ajax/search/illustrations/{search_name}'
+    id_list = []
+    dl_list = []
+    payload = {
+        'word' : search_name,
+        'p' : 1 ,
+        's_mode' : 's_tag',
+        'type' : 'illust_and_ugoira'
+    }
+
+    if mode == 0:
+            payload['mode'] = 'all'
+    elif mode == 1:
+            payload['mode'] = 'safe'
+    elif mode == 2:
+            payload['mode'] = 'r18'
+    
+    req_data = requests.get(url,params=payload,headers=headers).json()
+    total_illust = req_data['body']['illust']['total']
+    max_page = math.ceil(total_illust/60)
+    
+    if page > max_page:
+        page = max_page
+        
+    with ThreadPoolExecutor(50) as th:
+        th_ = []
+        th2_ = []
+        th3_ = []
+        
+        for page_num in range(1,page+1):
+            payload['p'] = page_num
+            reqs = th.submit(requests.get,url,headers=headers,params=payload)
+            th_.append(reqs)
+
+        for req in as_completed(th_):
+            json_data = req.result().json()
+            data = json_data['body']['illust']['data']
+            for id_ in data:
+                id_list.append(id_['id'])
+        
+        for id_ in id_list:
+            illust_url = f'https://www.pixiv.net/ajax/illust/{id_}'
+            illust_reqs = th.submit(requests.get,illust_url,headers=headers)
+            th2_.append(illust_reqs)
+        
+        for illust_req in as_completed(th2_):
+            json_data = illust_req.result().json()
+            if json_data['body']['bookmarkCount'] > bookmark:
+                dl_list.append(json_data['body']['urls']['original'])
+        
+        for dl_url in dl_list:
+            dl_reqs = th.submit(requests.get,dl_url,headers=headers)
+            th3_.append(dl_reqs)
+        
+        for dl_req in as_completed(th3_):
+            img_data = dl_req.result()
+            file_name = img_data.request.url.split('/')[-1]
+            content_data = img_data.content
+            async with aiofiles.open(f'./img/{file_name}','wb') as aiof:
+                await aiof.write(content_data)
+              
+                
 def ranking(page:int, cfg:dict,mode_num=0,r18mode=0,only_illust=False):
     headers = {'referer' : "https://www.pixiv.net/ranking.php",'cookie' : f"{cfg['login']['cookie']}",'user-agent': "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/95.0.4638.54 Safari/537.36",'Content-Type': 'application/json'}
     url = f'https://www.pixiv.net/ranking.php'
@@ -177,7 +243,7 @@ async def main():
     os.system('cls')
     print(banner)
     cfg = get_config()
-    print('0:Pixiv_id mode\n1:Search mode\n2:Ranking mode\n3:User illusts\n4:Premium search(Need premium)')
+    print('0:Pixiv_id mode\n1:Search mode\n2:Ranking mode\n3:User illusts\n4:Premium search(Need premium)\n5:popular_search(non premium)')
     mode = int(input('Mode:'))
     print(f"Mode:{mode}".center(50,'='))
      
@@ -243,7 +309,19 @@ async def main():
         else:
             ids = premium_search(search,order_num,mode_4_num,pages,cfg)
         id_list = [id for id in ids]
-        
+    
+    elif mode == 5:
+        search = input("Search:")
+        print("".center(50,'='))
+        collection = int(input("collection:"))
+        print("".center(50,'='))
+        print('0:All\n1:Safe\n2:R18(login)')
+        r18mode = int(input("R18_mode:"))
+        st_time = time.time()
+        await popular_search(search,collection,cfg,mode=r18mode)
+        print(f'總用時:{round(time.time() - st_time)}sec'.center(47,'='))
+        exit()
+
     try:
         st_time = time.time()
         with tqdm(total=len(id_list)) as pbar:
@@ -254,7 +332,7 @@ async def main():
         print(f'總用時:{round(time.time() - st_time)}sec'.center(47,'='))
     except ValueError:
         pass
-    
 
+  
 if __name__ == "__main__":
     asyncio.run(main())
