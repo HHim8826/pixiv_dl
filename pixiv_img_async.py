@@ -243,7 +243,7 @@ async def main():
     os.system('cls')
     print(banner)
     cfg = get_config()
-    print('0:Pixiv_id mode\n1:Search mode\n2:Ranking mode\n3:User illusts\n4:Premium search(Need premium)\n5:popular_search(non premium)')
+    print('0:Pixiv_id mode\n1:Search mode\n2:Ranking mode\n3:User illusts\n4:Premium search(Need premium)\n5:popular search(non premium)')
     mode = int(input('Mode:'))
     print(f"Mode:{mode}".center(50,'='))
      
