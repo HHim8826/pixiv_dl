@@ -190,9 +190,16 @@ async def popular_search(search_name:str, bookmark:int, cfg:dict, page=150, mode
         print(f'正在下載超過{bookmark}點讚的作品,共({len(dl_list)}件)作品. . .')
         return dl_list
 
-def ranking(page:int, cfg:dict,mode_num=0,r18mode=0,only_illust=False):
+async def ranking_info(url,headers,payload,session):
+    async with session.get(url,headers=headers,params=payload) as aioreq:
+        data = await aioreq.json()
+        return data
+
+async def ranking(page:int, cfg:dict,mode_num=0,r18mode=0,only_illust=False):
     headers = {'referer' : "https://www.pixiv.net/ranking.php",'cookie' : f"{cfg['login']['cookie']}",'user-agent': "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/95.0.4638.54 Safari/537.36",'Content-Type': 'application/json'}
     url = f'https://www.pixiv.net/ranking.php'
+    id_list = []
+    tasks = []
 
     if mode_num == 0:
         mode = 'daily'
@@ -218,9 +225,8 @@ def ranking(page:int, cfg:dict,mode_num=0,r18mode=0,only_illust=False):
     elif mode_num == 7:
         mode = 'male'
     
-    with ThreadPoolExecutor(4) as th:
-        ids = []
-        th_ = []
+    async with aiohttp.ClientSession() as session:
+        
         for page_num in range(page):
             
             params = {
@@ -232,17 +238,19 @@ def ranking(page:int, cfg:dict,mode_num=0,r18mode=0,only_illust=False):
                 params['content'] = 'illust'
                 
             params['p'] = page_num+1
-            reqs = th.submit(requests.get,url,headers=headers,params=params)
-            th_.append(reqs)
+            
+            tasks.append(asyncio.create_task(ranking_info(url,headers,params,session)))
+        
+        ids = await asyncio.wait(tasks)
 
-        for req in as_completed(th_):
-            data = req.result().json()
-            json_data = data['contents']
+        for id_ in ids[0]: 
+            result_data = id_.result()
+            json_data = result_data['contents']
             for data_info in json_data:
                 id_num = data_info['illust_id']
-                ids.append(id_num)
+                id_list.append(id_num)
 
-    return ids
+    return id_list
 
 
 async def pixiv_get(id,cfg:dict,session):
@@ -295,17 +303,17 @@ async def main():
         if ranking_num == 0 or 1 or 2 or 3:
             on_illust = input('Only illustration[y/n]:')
             if on_illust == 'y':
-                ids = ranking(page,cfg,mode_num=ranking_num,only_illust=True)
+                ids = await ranking(page,cfg,mode_num=ranking_num,only_illust=True)
                 print("".center(50,'='))
             else:
-                ids = ranking(page,cfg,mode_num=ranking_num)
+                ids = await ranking(page,cfg,mode_num=ranking_num)
         elif ranking_num == 6:
             print('0:daily_r18\n1:weekly_r18\n2:male_r18\n3:female_r18')
             r18mode = int(input("R18_mode:"))
             print("".center(50,'='))
-            ids = ranking(page,cfg,mode_num=ranking_num,r18mode=r18mode)
+            ids = await ranking(page,cfg,mode_num=ranking_num,r18mode=r18mode)
         else:
-            ids = ranking(page,cfg,mode_num=ranking_num)
+            ids = await ranking(page,cfg,mode_num=ranking_num)
             
         id_list = ids
         
@@ -354,6 +362,5 @@ async def main():
     except ValueError:
         pass
 
-  
 if __name__ == "__main__":
     asyncio.run(main())
