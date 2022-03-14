@@ -112,12 +112,16 @@ async def get_page_info(id_list,url,headers,payload,session):
 
     return id_list
 
-async def popu_dl(dl_url,session,headers,pbar):
-    file_name = dl_url.split('/')[-1]
-    async with session.get(dl_url,headers=headers) as req:
-        async with aiofiles.open(f'./img/{file_name}','wb') as aiof:
-            await aiof.write(await req.content.read())
-    pbar.update(1)
+async def get_id_info(id_,headers,session,bookmark,dl_list):
+    illust_url = f'https://www.pixiv.net/ajax/illust/{id_}'
+    async with session.get(illust_url,headers=headers) as aioreq:
+        data = await aioreq.json()
+        json_data = data['body']
+        if json_data['bookmarkCount'] > bookmark:
+            i_id = json_data['urls']['original'].split('/')[-1].split('_')[0]
+            dl_list.append(i_id)
+            
+    return dl_list
 
 async def popular_search(search_name:str, bookmark:int, cfg:dict, page=150, mode=0):
     headers = {'referer' : "https://www.pixiv.net",'cookie' : f"{cfg['login']['cookie']}",'user-agent': "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/95.0.4638.54 Safari/537.36",'Content-Type': 'application/json'}
@@ -147,9 +151,6 @@ async def popular_search(search_name:str, bookmark:int, cfg:dict, page=150, mode
     if page > max_page:
         page = max_page
     
-    th2_ = []
-    th3_ = []
-    
     async with aiohttp.ClientSession() as session:
         
         for page_num in range(1,page+1):
@@ -174,42 +175,21 @@ async def popular_search(search_name:str, bookmark:int, cfg:dict, page=150, mode
         
         print(f'正在獲得前{page}頁的作品. . .')
         id_list = await asyncio.wait(tasks)
-        count = 0
-        for val in tqdm(id_list[0],total=len(tasks)):
-            count += 1
-            if count == page-1:
-                id_list = val.result()
-    
-    with ThreadPoolExecutor(70) as th2:
+        
+        for val in id_list[0]:
+            id_list = val.result()
         
         for id_ in id_list:
-            illust_url = f'https://www.pixiv.net/ajax/illust/{id_}'
-            illust_reqs = th2.submit(requests.get,illust_url,headers=headers)
-            th2_.append(illust_reqs)
-
-        print(f'正在獲得所有作品({len(th2_)}件)的點讚量. . .')
-        for illust_req in tqdm(as_completed(th2_),total=len(th2_)):
-            data = illust_req.result()
-            json_data = data.json()['body']
-            if json_data['bookmarkCount'] > bookmark:
-                i_id = json_data['urls']['original'].split('/')[-1].split('_')[0]
-                info_url = f'https://www.pixiv.net/ajax/illust/{i_id}/pages'
-                info_reqs = th2.submit(requests.get,info_url,headers=headers)
-                th3_.append(info_reqs)
+            tasks.append(asyncio.create_task(get_id_info(id_,headers,session,bookmark,dl_list)))
         
-        print(f'正在取得超過{bookmark}點讚的每件作品({len(th3_)}件)的圖片數目. . .')
-        for info_req in tqdm(as_completed(th3_),total=len(th3_)):
-            list_data = info_req.result().json()['body']
-            for url in list_data:
-                dl_list.append(url['urls']['original'])
-    
-    print(f'正在下載超過{bookmark}點讚的作品,共({len(dl_list)}張)圖片. . .')
-    with tqdm(total=len(dl_list)) as pbar:          
-        async with aiohttp.ClientSession() as session1:
-            for dl_url in dl_list:
-                tasks.append(asyncio.create_task(popu_dl(dl_url,session1,headers,pbar)))
-                    
-            await asyncio.wait(tasks)
+        print(f'正在獲得所有作品({len(id_list)}件)的點讚量. . .')
+        dl_list = await asyncio.wait(tasks)
+
+        for i in dl_list[0]:
+            dl_list = i.result()
+
+        print(f'正在下載超過{bookmark}點讚的作品,共({len(dl_list)}件)作品. . .')
+        return dl_list
 
 def ranking(page:int, cfg:dict,mode_num=0,r18mode=0,only_illust=False):
     headers = {'referer' : "https://www.pixiv.net/ranking.php",'cookie' : f"{cfg['login']['cookie']}",'user-agent': "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/95.0.4638.54 Safari/537.36",'Content-Type': 'application/json'}
@@ -362,10 +342,7 @@ async def main():
         print("".center(50,'='))
         print('0:All\n1:Safe\n2:R18(login)')
         r18mode = int(input("Mode:"))
-        st_time = time.time()
-        await popular_search(search,collection,cfg,mode=r18mode)
-        print(f'總用時:{round(time.time() - st_time)}sec'.center(47,'='))
-        exit()
+        id_list = await popular_search(search,collection,cfg,mode=r18mode)
 
     try:
         st_time = time.time()
