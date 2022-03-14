@@ -197,7 +197,7 @@ async def popular_search(search_name:str, bookmark:int, cfg:dict, page=150, mode
                 info_reqs = th2.submit(requests.get,info_url,headers=headers)
                 th3_.append(info_reqs)
         
-        print(f'正現在取得每件作品({len(th3_)}件)的圖片數目. . .')
+        print(f'正在取得超過{bookmark}點讚的每件作品({len(th3_)}件)的圖片數目. . .')
         for info_req in tqdm(as_completed(th3_),total=len(th3_)):
             list_data = info_req.result().json()['body']
             for url in list_data:
