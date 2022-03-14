@@ -32,10 +32,16 @@ Mode:1
 ```
 
 1.下载代码仓库，并修改配置文件pixiv_cookie.toml
-```git clone https://github.com/HHim8826/pixiv.git
+```
+git clone https://github.com/HHim8826/pixiv.git
 cd pixiv
-vim pixiv_cookie.toml```
+vim pixiv_cookie.toml
+```
 2.安裝Python 3.7或更高版本，並使用pip安裝依賴
-```pip install -r requirements.txt```
+```
+pip install -r requirements.txt
+```
 3.啟動腳本
-```python pixiv_img.py```
+```
+python pixiv_img.py
+```
