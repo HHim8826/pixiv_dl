@@ -8,8 +8,6 @@ import aiohttp
 import aiofiles
 import time
 from tqdm import tqdm
-from concurrent.futures import ThreadPoolExecutor,as_completed
-
 
 banner = '''  _                                                       
  |_)  o      o           /\    _      ._    _     ._      
