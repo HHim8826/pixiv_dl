@@ -20,5 +20,5 @@ pip install -r requirements.txt
 ```
 3.啟動腳本
 ```
-python pixiv_img.py
+python pixiv_img_async.py
 ```
