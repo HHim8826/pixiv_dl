@@ -109,7 +109,6 @@ async def get_page_info(id_list,url,headers,payload,session):
         json_data = data['body']['illust']['data']
         for id_ in json_data:
             id_list.append(id_['id'])
-
     return id_list
 
 async def get_id_info(id_,headers,session,bookmark,dl_list):
@@ -123,7 +122,7 @@ async def get_id_info(id_,headers,session,bookmark,dl_list):
             
     return dl_list
 
-async def popular_search(search_name:str, bookmark:int, cfg:dict, page=150, mode=0):
+async def popular_search(search_name:str, bookmark:int, cfg:dict, page=10, mode=0):
     headers = {'referer' : "https://www.pixiv.net",'cookie' : f"{cfg['login']['cookie']}",'user-agent': "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/95.0.4638.54 Safari/537.36",'Content-Type': 'application/json'}
     url = f'https://www.pixiv.net/ajax/search/illustrations/{search_name}'
     tasks = []
@@ -178,7 +177,7 @@ async def popular_search(search_name:str, bookmark:int, cfg:dict, page=150, mode
         
         for val in id_list[0]:
             id_list = val.result()
-        
+
         for id_ in id_list:
             tasks.append(asyncio.create_task(get_id_info(id_,headers,session,bookmark,dl_list)))
         
