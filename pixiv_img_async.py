@@ -1,4 +1,5 @@
 #-*- coding: utf-8 -*
+from json import JSONDecodeError
 import os
 import requests
 import toml
@@ -103,11 +104,29 @@ def get_user_illusts(user_id,cfg:dict):
     for illusts_ids in req['body']['illusts']:   
         yield illusts_ids
 
+async def get_page_info(id_list,url,headers,payload,session):
+    async with session.get(url,headers=headers,params=payload) as aioreq:
+        data = await aioreq.json()
+        json_data = data['body']['illust']['data']
+        for id_ in json_data:
+            id_list.append(id_['id'])
+
+    return id_list
+
+async def popu_dl(dl_url,session,headers,pbar):
+    file_name = dl_url.split('/')[-1]
+    async with session.get(dl_url,headers=headers) as req:
+        async with aiofiles.open(f'./img/{file_name}','wb') as aiof:
+            await aiof.write(await req.content.read())
+    pbar.update(1)
+
 async def popular_search(search_name:str, bookmark:int, cfg:dict, page=150, mode=0):
     headers = {'referer' : "https://www.pixiv.net",'cookie' : f"{cfg['login']['cookie']}",'user-agent': "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/95.0.4638.54 Safari/537.36",'Content-Type': 'application/json'}
     url = f'https://www.pixiv.net/ajax/search/illustrations/{search_name}'
+    tasks = []
     id_list = []
     dl_list = []
+
     payload = {
         'word' : search_name,
         'p' : 1 ,
@@ -121,7 +140,7 @@ async def popular_search(search_name:str, bookmark:int, cfg:dict, page=150, mode
             payload['mode'] = 'safe'
     elif mode == 2:
             payload['mode'] = 'r18'
-    
+
     req_data = requests.get(url,params=payload,headers=headers).json()
     total_illust = req_data['body']['illust']['total']
     max_page = math.ceil(total_illust/60)
@@ -129,51 +148,75 @@ async def popular_search(search_name:str, bookmark:int, cfg:dict, page=150, mode
     if page > max_page:
         page = max_page
     
-    with ThreadPoolExecutor(50) as th:
-        th_ = []
-        th2_ = []
-        th3_ = []
+    th2_ = []
+    th3_ = []
+    
+    async with aiohttp.ClientSession() as session:
         
         for page_num in range(1,page+1):
-            payload['p'] = page_num
-            reqs = th.submit(requests.get,url,headers=headers,params=payload)
-            th_.append(reqs)
+            
+            payload = {
+                'word' : search_name,
+                'p' : 1 ,
+                's_mode' : 's_tag',
+                'type' : 'illust_and_ugoira'
+            }
 
+            if mode == 0:
+                    payload['mode'] = 'all'
+            elif mode == 1:
+                    payload['mode'] = 'safe'
+            elif mode == 2:
+                    payload['mode'] = 'r18'
+                    
+            payload['p'] = page_num
+
+            tasks.append(asyncio.create_task(get_page_info(id_list,url,headers,payload,session)))
+        
         print(f'正在獲得前{page}頁的作品. . .')
-        for req in tqdm(as_completed(th_),total=len(th_)):
-            json_data = req.result().json()
-            data = json_data['body']['illust']['data']
-            for id_ in data:
-                id_list.append(id_['id'])
+        id_list = await asyncio.wait(tasks)
+        count = 0
+        for val in tqdm(id_list[0],total=len(tasks)):
+            count += 1
+            if count == page-1:
+                id_list = val.result()
+    
+    # 
+    with ThreadPoolExecutor(70) as th2:
         
         for id_ in id_list:
             illust_url = f'https://www.pixiv.net/ajax/illust/{id_}'
-            illust_reqs = th.submit(requests.get,illust_url,headers=headers)
+            illust_reqs = th2.submit(requests.get,illust_url,headers=headers)
             th2_.append(illust_reqs)
-        
+
         print(f'正在獲得所有作品({len(th2_)}件)的點讚量. . .')
         for illust_req in tqdm(as_completed(th2_),total=len(th2_)):
-            json_data = illust_req.result().json()
-            if json_data['body']['bookmarkCount'] > bookmark:
-                dl_list.append(json_data['body']['urls']['original'])
+            data = illust_req.result()
+            json_data = data.json()['body']
+            if json_data['bookmarkCount'] > bookmark:
+                i_id = json_data['urls']['original'].split('/')[-1].split('_')[0]
+                info_url = f'https://www.pixiv.net/ajax/illust/{i_id}/pages'
+                info_reqs = th2.submit(requests.get,info_url,headers=headers)
+                th3_.append(info_reqs)
         
-        for dl_url in dl_list:
-            dl_reqs = th.submit(requests.get,dl_url,headers=headers)
-            th3_.append(dl_reqs)
-        
-        print(f'正在下載超過{bookmark}點讚的作品,共({len(th3_)}件)作品. . .')
-        for dl_req in tqdm(as_completed(th3_),total=len(th3_)):
-            img_data = dl_req.result()
-            file_name = img_data.request.url.split('/')[-1]
-            content_data = img_data.content
-            async with aiofiles.open(f'./img/{file_name}','wb') as aiof:
-                await aiof.write(content_data)
-              
-                
+        print(f'正現在取得每件作品({len(th3_)}件)的圖片數目. . .')
+        for info_req in tqdm(as_completed(th3_),total=len(th3_)):
+            list_data = info_req.result().json()['body']
+            for url in list_data:
+                dl_list.append(url['urls']['original'])
+    
+    print(f'正在下載超過{bookmark}點讚的作品,共({len(dl_list)}張)圖片. . .')
+    with tqdm(total=len(dl_list)) as pbar:          
+        async with aiohttp.ClientSession() as session1:
+            for dl_url in dl_list:
+                tasks.append(asyncio.create_task(popu_dl(dl_url,session1,headers,pbar)))
+                    
+            await asyncio.wait(tasks)
+
 def ranking(page:int, cfg:dict,mode_num=0,r18mode=0,only_illust=False):
     headers = {'referer' : "https://www.pixiv.net/ranking.php",'cookie' : f"{cfg['login']['cookie']}",'user-agent': "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/95.0.4638.54 Safari/537.36",'Content-Type': 'application/json'}
     url = f'https://www.pixiv.net/ranking.php'
-    
+
     if mode_num == 0:
         mode = 'daily'
     elif mode_num == 1:
@@ -198,18 +241,19 @@ def ranking(page:int, cfg:dict,mode_num=0,r18mode=0,only_illust=False):
     elif mode_num == 7:
         mode = 'male'
     
-    params = {
-        'format' : 'json',
-        'mode' : mode
-    }
-    
-    if mode == 'daily' or 'weekly' or 'monthly' or 'rookie' and only_illust:
-        params['content'] = 'illust'
-
     with ThreadPoolExecutor(4) as th:
         ids = []
         th_ = []
         for page_num in range(page):
+            
+            params = {
+                'format' : 'json',
+                'mode' : mode
+            }
+            
+            if mode == 'daily' or 'weekly' or 'monthly' or 'rookie' and only_illust:
+                params['content'] = 'illust'
+                
             params['p'] = page_num+1
             reqs = th.submit(requests.get,url,headers=headers,params=params)
             th_.append(reqs)
