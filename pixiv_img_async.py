@@ -122,7 +122,7 @@ async def get_id_info(id_,headers,session,bookmark,dl_list):
             
     return dl_list
 
-async def popular_search(search_name:str, bookmark:int, cfg:dict, page=10, mode=0):
+async def popular_search(search_name:str, bookmark:int, cfg:dict, page=150, mode=0):
     headers = {'referer' : "https://www.pixiv.net",'cookie' : f"{cfg['login']['cookie']}",'user-agent': "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/95.0.4638.54 Safari/537.36",'Content-Type': 'application/json'}
     url = f'https://www.pixiv.net/ajax/search/illustrations/{search_name}'
     tasks = []
