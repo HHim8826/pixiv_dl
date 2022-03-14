@@ -1,5 +1,4 @@
 #-*- coding: utf-8 -*
-from json import JSONDecodeError
 import os
 import requests
 import toml
@@ -181,7 +180,6 @@ async def popular_search(search_name:str, bookmark:int, cfg:dict, page=150, mode
             if count == page-1:
                 id_list = val.result()
     
-    # 
     with ThreadPoolExecutor(70) as th2:
         
         for id_ in id_list:
