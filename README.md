@@ -31,7 +31,7 @@ Mode:1
 ===================總用時:52sec===================
 ```
 
-1.下载代码仓库，并修改配置文件pixiv_cookie.toml
+1.下載代碼倉庫，並修改配置文件pixiv_cookie.toml
 ```
 git clone https://github.com/HHim8826/pixiv.git
 cd pixiv
