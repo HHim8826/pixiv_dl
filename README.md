@@ -8,6 +8,11 @@
 </p>
 
 ## 使用指南
+### 編譯版本
+
+從[Release頁面](https://github.com/HHim8826/pixiv_dl/releases)頁面下載並解壓壓縮包，修改配置文件pixiv_cookie.toml後運行.exe文件即可
+### 源代碼版本
+
 1.下載代碼倉庫，並修改配置文件pixiv_cookie.toml
 ```
 git clone https://github.com/HHim8826/pixiv.git
