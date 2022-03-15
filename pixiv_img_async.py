@@ -19,38 +19,50 @@ def get_config():
     cfg = toml.load(os.path.expanduser('./pixiv_cookie.toml'))
     return cfg
 
-
-def premium_search(name:str,order_num:int,mode_num:int,page_num:int,cfg:dict,only_illust=True):
+async def premium_page(url,headers,params,session,id_list):
+    async with session.get(url,headers=headers,params=params) as aioreq:
+        data = await aioreq.json()
+        json_data = data['body']['illustManga']['data']
+        for data_info in json_data:
+            id_list.addend(data_info["id"])
+    return id_list
+            
+async def premium_search(name:str,order_num:int,mode_num:int,page_num:int,cfg:dict,only_illust=True):
     headers = {'referer' : "https://www.pixiv.net/ranking.php",'cookie' : f"{cfg['login']['cookie']}",'user-agent': "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/95.0.4638.54 Safari/537.36",'Content-Type': 'application/json'}
-    
+    url = f'https://www.pixiv.net/ajax/search/artworks/{name}'
     order = ['popular_d','popular_male_d','popular_female_d']
     mode = ['s_tag','safe','r18']
+    tasks = []
+    id_list = []
 
-    params = {
-        'word' : {name},
-        'order' : {order[order_num]},
-        'mode' : {mode[mode_num]},
-        's_mode' : 's_tag',
-    }
-
-    if only_illust:
-        params['type'] = 'illust_and_ugoira'
-    else:
-        params['type'] = 'all'
+    order_ = order[order_num]
+    mode_ = mode[mode_num]
     
-    for pages in range(page_num):
+    async with aiohttp.ClientSession() as session:
+        for pages in range(1,page_num+1):
+            
+            params = {
+                'word' : name,
+                'order' : order_,
+                'mode' : mode_,
+                's_mode' : 's_tag',
+            }
+            
+            if only_illust:
+                params['type'] = 'illust_and_ugoira'
+            else:
+                params['type'] = 'all'
+            
+            params['p'] = pages
+            
+            tasks.append(asyncio.create_task(premium_page(url,headers,params,session,id_list)))
+
+        id_list = await asyncio.wait(tasks)
         
-        params['p'] = pages+1
-     
-        url = f'https://www.pixiv.net/ajax/search/artworks/{name}'
-        req = requests.get(url,headers=headers,params=params)
-        
-        json_data = req.json()
-        target_data = json_data['body']['illustManga']['data']
-        
-        for data_info in target_data:
-            illusts_id = data_info["id"]
-            yield illusts_id
+        for val in id_list[0]:
+            id_list = val.result()
+    
+    return id_list
 
 def pixiv_search(name:str,cfg:dict,mode=0) -> list:
     
@@ -335,10 +347,9 @@ async def main():
         only_illust = input('only_illust[y/n]:')
         print("".center(50,'='))
         if only_illust == 'n':
-            ids = premium_search(search,order_num,mode_4_num,pages,cfg,only_illust=False)
+            id_list = await premium_search(search,order_num,mode_4_num,pages,cfg,only_illust=False)
         else:
-            ids = premium_search(search,order_num,mode_4_num,pages,cfg)
-        id_list = [id for id in ids]
+            id_list = await premium_search(search,order_num,mode_4_num,pages,cfg)
     
     elif mode == 5:
         search = input("Search:")
