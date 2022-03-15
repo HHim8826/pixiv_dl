@@ -3,7 +3,7 @@
 <img src="https://raw.githubusercontent.com/HHim8826/pixiv_dl/main/img/c1.png" width="750">
 </p>
 <p align="center">
-<img src="https://img.shields.io/badge/version-V2.1.0-green.svg?longCache=true&style=for-the-badge">
+<img src="https://img.shields.io/badge/version-V2.1.1-green.svg?longCache=true&style=for-the-badge">
 <img src="https://img.shields.io/pypi/pyversions/pixiv_dl?style=for-the-badge">
 </p>
 
