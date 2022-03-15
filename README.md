@@ -16,8 +16,8 @@
 
 1.下載代碼倉庫，並修改配置文件pixiv_cookie.toml
 ```
-git clone https://github.com/HHim8826/pixiv.git
-cd pixiv
+git clone https://github.com/HHim8826/pixiv_dl.git
+cd pixiv_dl
 vim pixiv_cookie.toml
 ```
 2.安裝Python 3.7或更高版本，並使用pip安裝依賴
