@@ -5,6 +5,7 @@
 <p align="center">
 <img src="https://img.shields.io/badge/version-V2.1.1-green.svg?longCache=true&style=for-the-badge">
 <img src="https://img.shields.io/pypi/pyversions/pixiv_dl?style=for-the-badge">
+<img src="https://img.shields.io/badge/license-MIT-blue.svg?longCache=true&style=for-the-badge">
 </p>
 
 ## 使用指南
