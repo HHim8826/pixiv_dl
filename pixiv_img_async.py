@@ -345,12 +345,14 @@ async def main():
         print("".center(50,'='))
         collection = int(input("collection:"))
         print("".center(50,'='))
-        print('0:All\n1:Safe\n2:R18(login)')
+        print('0:All(login)\n1:Safe(login)\n2:R18(login)')
         r18mode = int(input("Mode:"))
+        st_time = time.time()
         id_list = await popular_search(search,collection,cfg,mode=r18mode)
 
     try:
-        st_time = time.time()
+        if mode != 5:
+            st_time = time.time()
         with tqdm(total=len(id_list)) as pbar:
             async with aiohttp.ClientSession() as session:
                 for id in id_list:
