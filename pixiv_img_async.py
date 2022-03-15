@@ -24,9 +24,9 @@ async def premium_page(url,headers,params,session,id_list):
         data = await aioreq.json()
         json_data = data['body']['illustManga']['data']
         for data_info in json_data:
-            id_list.addend(data_info["id"])
+            id_list.append(data_info["id"])
     return id_list
-            
+
 async def premium_search(name:str,order_num:int,mode_num:int,page_num:int,cfg:dict,only_illust=True):
     headers = {'referer' : "https://www.pixiv.net/ranking.php",'cookie' : f"{cfg['login']['cookie']}",'user-agent': "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/95.0.4638.54 Safari/537.36",'Content-Type': 'application/json'}
     url = f'https://www.pixiv.net/ajax/search/artworks/{name}'
