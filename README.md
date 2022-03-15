@@ -28,3 +28,9 @@ pip install -r requirements.txt
 ```
 python pixiv_img_async.py
 ```
+
+### 獲取Cookie
+1. 打开你的浏览器
+2. 登錄[Pixiv](https://www.pixiv.net/)
+3. 於首頁按```f12```或右键检查,打開開發者工具,點擊網絡,按```f5```點擊首個紀錄右鍵複製cookie值
+4. 改配置文件```pixiv_cookie.toml```中cookie即可
