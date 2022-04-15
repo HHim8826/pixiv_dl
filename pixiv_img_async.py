@@ -14,12 +14,11 @@ banner = '''  _
  |    |  ><  |  \/      /--\  _>  \/  | |  (_  o  |_)  \/ 
                     __            /               |    /  
 '''
-
-def get_config():
+def get_config() -> dict:
     cfg = toml.load(os.path.expanduser('./pixiv_cookie.toml'))
     return cfg
 
-async def premium_page(url,headers,params,session,id_list):
+async def premium_page(url,headers,params,session,id_list) -> list:
     async with session.get(url,headers=headers,params=params) as aioreq:
         data = await aioreq.json()
         json_data = data['body']['illustManga']['data']
@@ -27,7 +26,7 @@ async def premium_page(url,headers,params,session,id_list):
             id_list.append(data_info["id"])
     return id_list
 
-async def premium_search(name:str,order_num:int,mode_num:int,page_num:int,cfg:dict,only_illust=True):
+async def premium_search(name:str,order_num:int,mode_num:int,page_num:int,cfg:dict,only_illust=True) -> list:
     headers = {'referer' : "https://www.pixiv.net/ranking.php",'cookie' : f"{cfg['login']['cookie']}",'user-agent': "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/95.0.4638.54 Safari/537.36",'Content-Type': 'application/json'}
     url = f'https://www.pixiv.net/ajax/search/artworks/{name}'
     order = ['popular_d','popular_male_d','popular_female_d']
@@ -104,7 +103,7 @@ def pixiv_search(name:str,cfg:dict,mode=0) -> list:
             id_num_2 = info_2['id']
             yield id_num_2
 
-def get_user_illusts(user_id,cfg:dict):
+def get_user_illusts(user_id,cfg:dict) -> list:
     headers = {'referer' : "https://www.pixiv.net/ranking.php",'cookie' : f"{cfg['login']['cookie']}",'user-agent': "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/95.0.4638.54 Safari/537.36",'Content-Type': 'application/json'}
     url = f'https://www.pixiv.net/ajax/user/{user_id}/profile/all'
 
@@ -132,7 +131,7 @@ async def get_id_info(id_,headers,session,bookmark,dl_list):
             
     return dl_list
 
-async def popular_search(search_name:str, bookmark:int, cfg:dict, page=150, mode=0):
+async def popular_search(search_name:str, bookmark:int, cfg:dict, page=150, mode=0) -> list:
     headers = {'referer' : "https://www.pixiv.net",'cookie' : f"{cfg['login']['cookie']}",'user-agent': "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/95.0.4638.54 Safari/537.36",'Content-Type': 'application/json'}
     url = f'https://www.pixiv.net/ajax/search/illustrations/{search_name}'
     tasks = []
@@ -200,12 +199,12 @@ async def popular_search(search_name:str, bookmark:int, cfg:dict, page=150, mode
         print(f'正在下載超過{bookmark}點讚的作品,共({len(dl_list)}件)作品. . .')
         return dl_list
 
-async def ranking_info(url,headers,payload,session):
+async def ranking_info(url,headers,payload,session) -> dict:
     async with session.get(url,headers=headers,params=payload) as aioreq:
         data = await aioreq.json()
         return data
 
-async def ranking(page:int, cfg:dict,mode_num=0,r18mode=0,only_illust=False):
+async def ranking(page:int, cfg:dict,mode_num=0,r18mode=0,only_illust=False) -> list:
     headers = {'referer' : "https://www.pixiv.net/ranking.php",'cookie' : f"{cfg['login']['cookie']}",'user-agent': "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/95.0.4638.54 Safari/537.36",'Content-Type': 'application/json'}
     url = f'https://www.pixiv.net/ranking.php'
     id_list = []
@@ -263,14 +262,14 @@ async def ranking(page:int, cfg:dict,mode_num=0,r18mode=0,only_illust=False):
     return id_list
 
 
-async def pixiv_get(id,cfg:dict,session):
+async def pixiv_get(id,cfg:dict,session) -> dict:
     url = f'https://www.pixiv.net/ajax/illust/{id}/pages'
     headers = {'referer' : "https://www.pixiv.net/",'cookie' : f"{cfg['login']['cookie']}",'user-agent': "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/95.0.4638.54 Safari/537.36"} 
     async with session.get(url,headers=headers) as req:
         data = await req.json()
         return data['body']
 
-async def dl_img(id,cfg:dict,session,pbar):
+async def dl_img(id,cfg:dict,session,pbar) -> None:
     headers = {'referer' : "https://www.pixiv.net/",'cookie' : f"{cfg['login']['cookie']}",'user-agent': "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/95.0.4638.54 Safari/537.36"}
     data = await pixiv_get(id,cfg,session)
     for data_info in data:
@@ -310,7 +309,7 @@ async def main():
         page = int(input('Page:'))
         print("".center(50,'='))
         
-        if ranking_num == 0 or 1 or 2 or 3:
+        if ranking_num in {0 , 1 , 2 , 3}:
             on_illust = input('Only illustration[y/n]:')
             if on_illust == 'y':
                 ids = await ranking(page,cfg,mode_num=ranking_num,only_illust=True)
