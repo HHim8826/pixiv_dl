@@ -10,6 +10,16 @@
 
 ## 安裝
 
+### 編譯版本（Windows，免安裝 Python）
+
+從 [Release 頁面](https://github.com/HHim8826/pixiv_dl/releases) 下載
+`pixiv-dl-vX.Y.Z-windows-x64.zip` 並解壓，把 `config.example.toml` 複製成
+`config.toml` 填入 cookie 後執行 `pixiv-dl.exe` 即可。
+
+exe 由 GitHub Actions 在合併進 `main` 時自動建置與發佈，版本號取自套件本身。
+
+### 源碼版本
+
 需要 Python 3.9 或更高版本。
 
 ```

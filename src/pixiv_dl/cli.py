@@ -13,7 +13,7 @@ from collections.abc import Sequence
 from datetime import date
 from pathlib import Path
 
-from . import interactive
+from . import __version__, interactive
 from .client import PixivBlockedError, PixivClient
 from .config import Config, ConfigError
 from .download import download_all
@@ -97,6 +97,7 @@ def build_parser() -> argparse.ArgumentParser:
         description='Pixiv 非同步下載器。不帶子命令時進入互動模式。',
         parents=[common],
     )
+    parser.add_argument('--version', action='version', version=f'pixiv-dl {__version__}')
     sub = parser.add_subparsers(dest='command')
 
     def add_command(name: str, help_text: str) -> argparse.ArgumentParser:
