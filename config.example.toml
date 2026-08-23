@@ -1,0 +1,49 @@
+# 複製這個檔案成 config.toml 後填入自己的值。
+# config.toml 已被 .gitignore 忽略，絕對不要把它提交進 git。
+#
+# cookie 也可以改用環境變數 PIXIV_COOKIE 提供（優先權高於本檔案）：
+#   PowerShell : $env:PIXIV_COOKIE = "..."
+#   bash/zsh   : export PIXIV_COOKIE="..."
+
+[login]
+# 登入 Pixiv 後，於開發者工具的網路分頁複製任一請求的 cookie 標頭值。
+cookie = ""
+user-agent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36"
+
+[download]
+out-dir = "img"
+
+# 輸出子目錄範本。可用的欄位：{kind}（指令名）、{label}（查詢識別字串）、{date}。
+# 留空字串代表全部平鋪在 out-dir（v3.0 的舊行為），指令列用 --flat 也可以。
+#   "{kind}/{label}"        img/ranking/daily-2026-08-23/98765_p0.png
+#   "{date}/{kind}/{label}" img/2026-08-23/search/miku/98765_p0.png
+#   ""                      img/98765_p0.png
+path-template = "{kind}/{label}"
+
+# 多頁作品是否另開以作品 id 命名的子資料夾：
+#   auto   多頁作品才開（單張平鋪）
+#   always 一律開
+#   never  全部平鋪，靠 _p0 _p1 區分
+multipage-dirs = "auto"
+
+# Pixiv 位於 Cloudflare 後方。下面兩個是最重要的旋鈕：
+#   concurrency      同時在飛的請求數
+#   request-interval 全域最小請求間隔（秒）—— 真正決定每秒速率的是它
+# 被 Cloudflare 擋（log 出現「Cloudflare 機器人挑戰頁」）就把 interval 調大。
+concurrency = 4
+request-interval = 0.2
+
+timeout = 60.0
+connect-timeout = 10.0
+max-retries = 3
+retry-backoff = 1.0
+
+# 遇到 Cloudflare 挑戰頁時的退避基數，以及連續幾次就放棄整批。
+challenge-backoff = 15.0
+challenge-limit = 5
+
+[search]
+# 送出 ai_type=1 隱藏 AI 生成作品，false 則送 ai_type=0（顯示全部）。
+# 只影響搜尋類指令（search / premium / popular），排行榜與使用者作品不支援。
+# 可用 --hide-ai / --show-ai 個別覆蓋。
+hide-ai = false

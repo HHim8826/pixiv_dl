@@ -1,6 +1,0 @@
-tqdm
-toml
-requests
-asyncio
-aiohttp
-aiofiles

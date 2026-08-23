@@ -1,14 +1,57 @@
-[login]
-user-agent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36"
-cookie = ""
-[path]
-AllInOnePath = true
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pixiv-dl"
+version = "3.0.0"
+description = "Pixiv 非同步下載器"
+readme = "README.md"
+license = { text = "MIT" }
+requires-python = ">=3.9"
+dependencies = [
+    "aiohttp>=3.8",
+    "aiofiles>=22.1",
+    "tqdm>=4.64",
+    "tomli>=2.0; python_version < '3.11'",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8", "ruff>=0.6"]
+
+[project.scripts]
+pixiv-dl = "pixiv_dl.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/HHim8826/pixiv_dl"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
 
 [tool.ruff]
-line-length = 100 
+line-length = 100
+target-version = "py39"
+src = ["src", "tests"]
 
 [tool.ruff.lint]
-select = ["E", "F", "I"]
+# ASYNC 會抓出 async 函式裡的阻塞呼叫；B 會抓出恆真條件式之類的邏輯陷阱。
+select = ["E", "F", "I", "UP", "B", "ASYNC", "SIM", "RUF"]
+# 註解與提示訊息大量使用中文全形標點，這三條在中文語境下只會製造噪音。
+ignore = [
+    "RUF001",
+    "RUF002",
+    "RUF003",
+    # 落地檔案時的 stat/rename 是本機磁碟操作，耗時遠低於一次網路往返。
+    # 為此引入 anyio 並不划算，這裡明確接受這個取捨。
+    "ASYNC240",
+]
+
+[tool.ruff.lint.per-file-ignores]
+# 測試裡的 client 依賴 serve() 產生的 base_url，巢狀寫法比擠成一行好讀。
+"tests/*" = ["SIM117"]
 
 [tool.ruff.format]
 quote-style = "single"

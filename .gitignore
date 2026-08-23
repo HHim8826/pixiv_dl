@@ -1,1 +1,16 @@
 img/*
+!img/c1.png
+
+# 內含 Pixiv session cookie，絕對不要提交
+config.toml
+
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+build/
+dist/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
