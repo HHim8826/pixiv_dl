@@ -36,6 +36,11 @@ CHALLENGE_MARKERS = (
     'checking your browser',
     'attention required',
 )
+#: 挑戰頁一定是 HTML；正常的圖片／JSON 回應不會是這些型別，
+#: 所以只有這些 content-type 需要進一步檢查 body。
+HTML_TYPES = frozenset({'text/html', 'application/xhtml+xml'})
+#: 診斷時只讀開頭這麼多 bytes，不把整份 body 拉進記憶體。
+PEEK_BYTES = 4096
 #: Retry-After 再長也不等超過這個秒數，免得整批卡死。
 MAX_RETRY_AFTER = 120.0
 CHUNK_SIZE = 1 << 16
@@ -168,8 +173,13 @@ class PixivClient:
         async def attempt() -> dict[str, Any]:
             async with self.session.get(url, headers=headers, params=params) as resp:
                 await _raise_for_status(resp)
-                # Pixiv 對 JSON 端點回傳 text/plain，不能用預設的 content-type 檢查。
-                data = await resp.json(content_type=None)
+                try:
+                    # Pixiv 對 JSON 端點回傳 text/plain，不能用預設的 content-type 檢查。
+                    data = await resp.json(content_type=None)
+                except ValueError as exc:
+                    # JSONDecodeError 是 ValueError，不轉型的話它會穿過
+                    # download_all 的 except 直接炸掉整批下載。
+                    raise PixivAPIError(f'{url} 回傳的不是合法 JSON：{exc}') from exc
             if not isinstance(data, dict):
                 raise PixivAPIError(f'{url} 回傳了非預期的 JSON 結構')
             if data.get('error'):
@@ -294,18 +304,54 @@ def _parse_retry_after(value: str | None) -> float | None:
     return max(0.0, (target - now).total_seconds())
 
 
-async def _raise_for_status(resp: aiohttp.ClientResponse) -> None:
-    if resp.status < 400:
-        return
-    # 讀一小段 body 當作診斷訊息，避免只看到一個光禿禿的狀態碼。
+async def _peek(resp: aiohttp.ClientResponse, limit: int = PEEK_BYTES) -> str:
+    """讀取回應開頭一小段當作診斷用。刻意不讀完整個 body。"""
     try:
-        body = await resp.text()
-    except Exception:  # pragma: no cover - body 解碼失敗時不該蓋掉原始錯誤
-        body = ''
+        raw = await resp.content.read(limit)
+    except Exception:  # pragma: no cover - 讀取失敗時不該蓋掉原始錯誤
+        return ''
+    try:
+        encoding = resp.get_encoding()
+    except Exception:  # pragma: no cover - content-type 怪異時退回 utf-8
+        encoding = 'utf-8'
+    return raw.decode(encoding or 'utf-8', errors='replace')
 
+
+def _looks_like_challenge(body: str) -> bool:
+    lowered = body.lower()
+    return any(marker in lowered for marker in CHALLENGE_MARKERS)
+
+
+def _content_type(resp: aiohttp.ClientResponse) -> str:
+    return (resp.headers.get('Content-Type') or '').split(';')[0].strip().lower()
+
+
+async def _raise_for_status(resp: aiohttp.ClientResponse) -> None:
     retry_after = _parse_retry_after(resp.headers.get('Retry-After'))
-    lowered = body[:4096].lower()
-    if any(marker in lowered for marker in CHALLENGE_MARKERS):
+
+    if resp.status < 400:
+        # Cloudflare 不一定用 4xx 送挑戰頁——200 + HTML 也很常見。只看狀態碼
+        # 就放行的話，那份 HTML 會被當成圖片寫進 .png，或讓 JSON 解析炸出
+        # 未被攔截的 ValueError。這裡靠 content-type 判斷值不值得再看一眼，
+        # 正常的圖片／JSON 回應完全不會進到這個分支。
+        if _content_type(resp) not in HTML_TYPES:
+            return
+        body = await _peek(resp)
+        if _looks_like_challenge(body):
+            raise PixivChallengeError(
+                resp.status,
+                str(resp.url),
+                'Cloudflare 機器人挑戰頁（HTTP 200）',
+                retry_after=retry_after,
+            )
+        raise PixivAPIError(
+            f'{resp.url} 回傳了 HTML 而非預期的圖片或 JSON'
+            f'（HTTP {resp.status}），可能是 cookie 失效或被導向登入頁'
+        )
+
+    # 讀一小段 body 當作診斷訊息，避免只看到一個光禿禿的狀態碼。
+    body = await _peek(resp)
+    if _looks_like_challenge(body):
         # 不要把整頁 HTML 倒進 log——訊息要能一眼看懂。
         raise PixivChallengeError(
             resp.status,

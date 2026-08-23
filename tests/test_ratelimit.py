@@ -17,7 +17,7 @@ from pixiv_dl.client import (
     _parse_retry_after,
 )
 from pixiv_dl.download import download_all
-from support import config, run, serve
+from support import config, png, run, serve
 
 CHALLENGE_BODY = (
     '<!DOCTYPE html><html lang="en-US"><head><title>Just a moment...</title>'
@@ -199,3 +199,125 @@ def test_rate_limiter_spaces_requests_out(tmp_path):
 )
 def test_parse_retry_after(header, expected):
     assert _parse_retry_after(header) == expected
+
+
+# --- 200 狀態碼的挑戰頁（Codex review #3838335831）---
+
+CHALLENGE_HEADERS = {'Content-Type': 'text/html; charset=UTF-8'}
+
+
+def test_challenge_page_with_200_status_is_detected(tmp_path):
+    """迴歸測試：Cloudflare 不一定用 4xx 送挑戰頁。只看狀態碼就放行的話，
+    那份 HTML 會被當成圖片寫進 .png 並計為成功。"""
+    holder = {}
+
+    async def pages(request: web.Request) -> web.Response:
+        return web.json_response(
+            {'body': [{'urls': {'original': holder['base'] + '/img/1_p0.png'}}]}
+        )
+
+    async def challenge_200(request: web.Request) -> web.Response:
+        return web.Response(status=200, text=CHALLENGE_BODY, headers=CHALLENGE_HEADERS)
+
+    async def scenario():
+        routes = {'/ajax/illust/{i}/pages': pages, '/img/{name}': challenge_200}
+        async with serve(routes) as base:
+            holder['base'] = base
+            async with PixivClient(config(base, tmp_path)) as client:
+                return await download_all(client, ['1'], tmp_path, show_progress=False)
+
+    report = run(scenario())
+    assert not report.ok
+    assert report.downloaded == 0
+    assert list(tmp_path.iterdir()) == []  # 沒有任何 HTML 被寫成圖片
+    assert 'Cloudflare' in report.failures[0][1]
+
+
+def test_challenge_page_with_200_status_trips_the_circuit_breaker(tmp_path):
+    """200 的挑戰頁也要算進斷路器，否則會一路磨完整批。"""
+
+    async def challenge_200(request: web.Request) -> web.Response:
+        return web.Response(status=200, text=CHALLENGE_BODY, headers=CHALLENGE_HEADERS)
+
+    async def scenario():
+        _, sleep = _recording_sleep()
+        async with serve({'/ajax/illust/{i}/pages': challenge_200}) as base:
+            cfg = config(base, tmp_path, max_retries=0, challenge_limit=2)
+            async with PixivClient(cfg, sleep=sleep) as client:
+                with pytest.raises(PixivChallengeError):
+                    await client.get_json('/ajax/illust/1/pages')
+                with pytest.raises(PixivBlockedError):
+                    await client.get_json('/ajax/illust/2/pages')
+                return client.blocked
+
+    assert run(scenario()) is True
+
+
+def test_unexpected_html_without_markers_is_reported_not_written(tmp_path):
+    """沒有挑戰特徵但仍是 HTML（例如被導向登入頁），一樣不能寫成圖片。"""
+    holder = {}
+
+    async def pages(request: web.Request) -> web.Response:
+        return web.json_response(
+            {'body': [{'urls': {'original': holder['base'] + '/img/1_p0.png'}}]}
+        )
+
+    async def login_page(request: web.Request) -> web.Response:
+        return web.Response(
+            status=200, text='<html><body>Please log in</body></html>', headers=CHALLENGE_HEADERS
+        )
+
+    async def scenario():
+        routes = {'/ajax/illust/{i}/pages': pages, '/img/{name}': login_page}
+        async with serve(routes) as base:
+            holder['base'] = base
+            async with PixivClient(config(base, tmp_path)) as client:
+                return await download_all(client, ['1'], tmp_path, show_progress=False)
+
+    report = run(scenario())
+    assert not report.ok
+    assert list(tmp_path.iterdir()) == []
+    assert 'HTML' in report.failures[0][1]
+
+
+def test_malformed_json_becomes_a_pixiv_error(tmp_path):
+    """JSONDecodeError 是 ValueError，不轉型會穿過 download_all 的 except
+    直接炸掉整批 gather。"""
+    from pixiv_dl.client import PixivAPIError
+
+    async def broken(request: web.Request) -> web.Response:
+        return web.Response(status=200, text='{not json', content_type='application/json')
+
+    async def scenario():
+        async with serve({'/ajax/illust/{i}/pages': broken}) as base:
+            async with PixivClient(config(base, tmp_path)) as client:
+                with pytest.raises(PixivAPIError):
+                    await client.get_json('/ajax/illust/1/pages')
+
+    run(scenario())
+
+
+def test_normal_responses_never_read_the_body_twice(tmp_path):
+    """正常的圖片／JSON 回應不該進到 content-type 檢查的分支。"""
+    holder = {}
+
+    async def pages(request: web.Request) -> web.Response:
+        return web.json_response(
+            {'body': [{'urls': {'original': holder['base'] + '/img/1_p0.png'}}]}
+        )
+
+    async def image(request: web.Request) -> web.Response:
+        return web.Response(body=png(512), content_type='image/png')
+
+    async def scenario():
+        routes = {'/ajax/illust/{i}/pages': pages, '/img/{name}': image}
+        async with serve(routes) as base:
+            holder['base'] = base
+            async with PixivClient(config(base, tmp_path)) as client:
+                return await download_all(client, ['1'], tmp_path, show_progress=False)
+
+    report = run(scenario())
+    assert report.ok
+    assert report.downloaded == 1
+    # body 完整落地，沒有被診斷用的 peek 吃掉開頭。
+    assert (tmp_path / '1_p0.png').stat().st_size == len(png(512))

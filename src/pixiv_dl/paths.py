@@ -27,9 +27,20 @@ _RESERVED = frozenset(
     }
 )
 
-#: 單一路徑片段的長度上限。Pixiv 的搜尋詞可以很長，而多數檔案系統的
-#: 單層名稱上限是 255 bytes——中日文一個字最多 4 bytes，抓 80 字元安全。
-MAX_COMPONENT = 80
+#: 單一路徑片段的長度上限，以 **UTF-8 位元組** 計。多數檔案系統（ext4、
+#: APFS…）的單層名稱上限是 255 bytes，而中日文一字 3 bytes、emoji 4 bytes，
+#: 用字元數去算會低估到三四倍——80 個 emoji 就是 320 bytes，mkdir 直接
+#: ENAMETOOLONG。留點餘裕抓 200。
+MAX_COMPONENT_BYTES = 200
+
+
+def _truncate_bytes(text: str, limit: int) -> str:
+    encoded = text.encode('utf-8')
+    if len(encoded) <= limit:
+        return text
+    # errors='ignore' 會丟掉結尾被切斷的那個不完整字元。
+    return encoded[:limit].decode('utf-8', errors='ignore')
+
 
 MULTIPAGE_MODES = ('auto', 'always', 'never')
 DEFAULT_TEMPLATE = '{kind}/{label}'
@@ -45,9 +56,11 @@ def sanitize_component(text: str, *, fallback: str = 'unnamed') -> str:
         return fallback
     if cleaned.split('.')[0].upper() in _RESERVED:
         cleaned = f'_{cleaned}'
-    if len(cleaned) > MAX_COMPONENT:
-        cleaned = cleaned[:MAX_COMPONENT].rstrip('. ') or fallback
-    return cleaned
+    truncated = _truncate_bytes(cleaned, MAX_COMPONENT_BYTES)
+    if truncated != cleaned:
+        # 截斷後結尾可能又露出點或空白，得再清一次。
+        truncated = truncated.rstrip('. ')
+    return truncated or fallback
 
 
 @dataclass(frozen=True)

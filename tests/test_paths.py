@@ -13,7 +13,7 @@ import pytest
 
 from pixiv_dl.paths import (
     DEFAULT_TEMPLATE,
-    MAX_COMPONENT,
+    MAX_COMPONENT_BYTES,
     Source,
     illust_dir,
     sanitize_component,
@@ -51,9 +51,28 @@ def test_sanitize_escapes_windows_reserved_names(name):
     assert result.startswith('_')
 
 
-def test_sanitize_truncates_long_names():
-    result = sanitize_component('あ' * 300)
-    assert len(result) <= MAX_COMPONENT
+@pytest.mark.parametrize(
+    'char',
+    [
+        'a',  # 1 byte
+        'あ',  # 3 bytes
+        '𠮷',  # 4 bytes（BMP 外）
+        '🎨',  # 4 bytes emoji
+    ],
+)
+def test_sanitize_truncates_by_utf8_bytes_not_characters(char):
+    """迴歸測試：80 個 4-byte 字元 = 320 bytes，超過多數檔案系統的
+    255 bytes 單層上限，mkdir 會在下載開始前就 ENAMETOOLONG。"""
+    result = sanitize_component(char * 300)
+    assert len(result.encode('utf-8')) <= MAX_COMPONENT_BYTES
+    assert result  # 不能截成空字串
+
+
+def test_truncated_name_stays_valid_utf8():
+    """截斷不能把多位元組字元切成兩半。"""
+    result = sanitize_component('🎨' * 300)
+    assert result.encode('utf-8').decode('utf-8') == result
+    assert '�' not in result
 
 
 def test_sanitize_never_ends_with_dot_or_space():
