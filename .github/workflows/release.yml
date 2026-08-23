@@ -1,0 +1,124 @@
+name: Release
+
+# 合併進 main 時打包 Windows exe 並自動發佈 Release。
+# 版本號讀自套件本身（pixiv_dl.__version__），不寫死在這裡——所以要發
+# 下一版只要改 pyproject.toml 與 __init__.py 的版本再合併即可。
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+# 同時只跑一個，避免兩次合併搶著建立同一個 tag。
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install
+        run: |
+          python -m pip install --upgrade pip
+          pip install ".[dev]" pyinstaller
+
+      - name: Test
+        # 寧可不發佈，也不要發佈一個壞掉的 exe。
+        run: pytest -q
+
+      - name: Read version
+        id: version
+        shell: bash
+        run: |
+          version=$(python -c "import pixiv_dl; print(pixiv_dl.__version__)")
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "tag=v$version" >> "$GITHUB_OUTPUT"
+          echo "版本：$version"
+
+      - name: Check whether the release already exists
+        id: check
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if gh release view "${{ steps.version.outputs.tag }}" >/dev/null 2>&1; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+            echo "${{ steps.version.outputs.tag }} 已存在，略過發佈"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Build exe
+        if: steps.check.outputs.exists == 'false'
+        run: >
+          pyinstaller --onefile --clean --noconfirm
+          --name pixiv-dl
+          --paths src
+          scripts/pixiv-dl.py
+
+      - name: Smoke test the exe
+        if: steps.check.outputs.exists == 'false'
+        shell: pwsh
+        run: |
+          $out = & dist\pixiv-dl.exe --version
+          if ($LASTEXITCODE -ne 0) { throw "exe 無法執行（exit $LASTEXITCODE）" }
+          Write-Host "exe 回報：$out"
+          if ($out -notmatch '${{ steps.version.outputs.version }}') {
+            throw "exe 的版本與套件不符：$out"
+          }
+          # 沒有設定檔時應該給出提示並回傳 2，而不是 traceback。
+          & dist\pixiv-dl.exe ranking --config nonexistent.toml 2>&1 | Out-Null
+          if ($LASTEXITCODE -ne 2) { throw "缺少設定檔時預期 exit 2，實際 $LASTEXITCODE" }
+
+      - name: Package
+        if: steps.check.outputs.exists == 'false'
+        shell: pwsh
+        run: |
+          $name = "pixiv-dl-${{ steps.version.outputs.tag }}-windows-x64"
+          New-Item -ItemType Directory -Force $name | Out-Null
+          Copy-Item dist\pixiv-dl.exe, config.example.toml, README.md, LICENSE $name
+          Compress-Archive -Path "$name\*" -DestinationPath "$name.zip"
+          echo "ASSET=$name.zip" >> $env:GITHUB_ENV
+
+      - name: Create release
+        if: steps.check.outputs.exists == 'false'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          cat > notes.md <<'EOF'
+          ## 使用方式
+
+          1. 下載並解壓下方的 zip
+          2. 把 `config.example.toml` 複製成 `config.toml`，填入自己的 Pixiv cookie
+             （取得方式見 README）
+          3. 直接執行 `pixiv-dl.exe` 進入互動選單，或用子命令：
+
+          ```
+          pixiv-dl.exe ranking --mode daily --pages 3
+          pixiv-dl.exe search "初音ミク" --hide-ai
+          pixiv-dl.exe popular "初音ミク" --min-bookmarks 5000
+          ```
+
+          cookie 也可以改用環境變數 `PIXIV_COOKIE` 提供。
+
+          > Pixiv 位於 Cloudflare 後方。若 log 出現「Cloudflare 機器人挑戰頁」，
+          > 把 `config.toml` 的 `request-interval` 調大即可；已下載的檔案會自動
+          > 跳過，重跑同一個指令就是續傳。
+
+          ---
+          EOF
+          gh release create "${{ steps.version.outputs.tag }}" \
+            "$ASSET" \
+            --title "${{ steps.version.outputs.tag }}" \
+            --notes-file notes.md \
+            --generate-notes
