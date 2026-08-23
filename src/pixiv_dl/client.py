@@ -12,17 +12,18 @@ import asyncio
 import logging
 import random
 import re
-from collections.abc import Awaitable
+from collections.abc import Awaitable, Callable
 from email.utils import parsedate_to_datetime
 from pathlib import Path
 from types import TracebackType
-from typing import Any, Callable
+from typing import Any
 from urllib.parse import urlparse
 
 import aiofiles
 import aiohttp
 
 from .config import Config
+from .paths import sanitize_component
 
 log = logging.getLogger(__name__)
 
@@ -93,8 +94,8 @@ class _RateLimiter:
         self._next_at = 0.0
 
     async def acquire(self, sleep: Callable[[float], Awaitable[None]]) -> None:
-        if self._interval <= 0:
-            return
+        # 就算 interval 是 0 也不能直接返回——pause() 設下的 Cloudflare
+        # cooldown 也記在 _next_at 上，跳過檢查等於被擋之後繼續全速轟炸。
         async with self._lock:
             loop = asyncio.get_running_loop()
             wait = self._next_at - loop.time()
@@ -370,5 +371,7 @@ def filename_from_url(url: str, *, fallback: str) -> str:
     # 網址根本沒有檔名，應該退回 fallback。同樣刻意不做 unquote。
     name = urlparse(url).path.rsplit('/', 1)[-1]
     if not name or name in ('.', '..') or not _SAFE_NAME.match(name):
-        return fallback
+        # fallback 內嵌 illust_id，而 id 可能是 `pixiv-dl id ../../evil` 這種
+        # 直接來自指令列的字串——不消毒就會寫到輸出目錄外面。
+        return sanitize_component(fallback, fallback='unnamed')
     return name

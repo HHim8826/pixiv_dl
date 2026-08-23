@@ -73,10 +73,16 @@ pixiv-dl search "初音ミク" --hide-ai
 | `--no-progress` | 不顯示進度條 |
 | `-v, --verbose` | 輸出除錯訊息 |
 
-沒有安裝也可以直接跑模組：
+安裝後也可以用模組形式呼叫：
 
 ```
 python -m pixiv_dl ranking --pages 1
+```
+
+本專案採 src layout，未安裝時 `src/` 不在 `sys.path` 上，要直接從原始碼跑得自己指定：
+
+```
+PYTHONPATH=src python -m pixiv_dl ranking --pages 1
 ```
 
 離開碼：`0` 全部成功、`1` 有作品下載失敗、`2` 設定錯誤、`130` 使用者中斷。

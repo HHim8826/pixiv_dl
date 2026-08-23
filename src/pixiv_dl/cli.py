@@ -14,7 +14,7 @@ from datetime import date
 from pathlib import Path
 
 from . import interactive
-from .client import PixivClient
+from .client import PixivBlockedError, PixivClient
 from .config import Config, ConfigError
 from .download import download_all
 from .paths import Source
@@ -199,13 +199,30 @@ async def collect_ids(args: argparse.Namespace, client: PixivClient) -> list[str
     raise ValueError(f'未知的命令：{args.command}')
 
 
+def _print_blocked_advice() -> None:
+    print(
+        '\n被 Cloudflare 的機器人偵測擋下，已提前中止。建議：\n'
+        '  1. 把 config.toml 的 request-interval 調大（例如 1.0）\n'
+        '  2. 把 concurrency 調小（例如 2）\n'
+        '  3. 等幾分鐘再跑；已下載的檔案會自動跳過，可以直接續傳',
+        file=sys.stderr,
+    )
+
+
 async def run(args: argparse.Namespace, config: Config) -> int:
     async with PixivClient(config) as client:
-        if args.command is None:
-            ids, source = await interactive.prompt_for_ids(client)
-        else:
-            ids = await collect_ids(args, client)
-            source = source_for(args)
+        try:
+            if args.command is None:
+                ids, source = await interactive.prompt_for_ids(client)
+            else:
+                ids = await collect_ids(args, client)
+                source = source_for(args)
+        except PixivBlockedError as exc:
+            # 取得 id 的階段（例如 popular 的逐件查詢）就被擋下時，
+            # 也要給出和下載階段一致的說明與離開碼。
+            print(exc, file=sys.stderr)
+            _print_blocked_advice()
+            return 1
 
         dest = config.out_dir / source.subdir(config.path_template)
         log.info('輸出目錄：%s', dest)
@@ -213,13 +230,7 @@ async def run(args: argparse.Namespace, config: Config) -> int:
 
     print(report.summary())
     if report.blocked:
-        print(
-            '\n被 Cloudflare 的機器人偵測擋下，已提前中止。建議：\n'
-            '  1. 把 config.toml 的 request-interval 調大（例如 1.0）\n'
-            '  2. 把 concurrency 調小（例如 2）\n'
-            '  3. 等幾分鐘再跑；已下載的檔案會自動跳過，可以直接續傳',
-            file=sys.stderr,
-        )
+        _print_blocked_advice()
     if report.failures:
         print('失敗的作品：', file=sys.stderr)
         for illust_id, reason in report.failures[:20]:
@@ -250,7 +261,9 @@ def main(argv: Sequence[str] | None = None) -> int:
         if args.concurrency is not None:
             config = dataclasses.replace(config, concurrency=args.concurrency)
         if args.flat:
-            config = dataclasses.replace(config, path_template='')
+            # 只清空 path_template 不夠：multipage_dirs 預設 auto，多頁作品
+            # 仍會落到 out_dir/<illust_id>/，就不是承諾的「全部平鋪」。
+            config = dataclasses.replace(config, path_template='', multipage_dirs='never')
         elif args.path_template is not None:
             config = dataclasses.replace(config, path_template=args.path_template)
         config.require_cookie()

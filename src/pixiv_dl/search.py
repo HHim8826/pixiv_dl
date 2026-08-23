@@ -12,7 +12,7 @@ from urllib.parse import quote
 
 from tqdm import tqdm
 
-from .client import PixivClient, PixivError
+from .client import PixivBlockedError, PixivClient, PixivError
 
 log = logging.getLogger(__name__)
 
@@ -245,6 +245,10 @@ async def popular_search(
     async def bookmarks(illust_id: str) -> str | None:
         try:
             data = await client.get_json(f'/ajax/illust/{illust_id}')
+        except PixivBlockedError:
+            # 斷路器跳開時每一件都會回 None，吞掉的話 popular_search 會以
+            # 「成功但空清單」返回，使用者完全看不出整批已經被中止。
+            raise
         except PixivError as exc:
             # 已刪除／受限的單一作品不該讓整批查詢失敗。
             log.debug('無法取得作品 %s 的資訊：%s', illust_id, exc)

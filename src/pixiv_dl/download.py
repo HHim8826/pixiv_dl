@@ -8,6 +8,7 @@ from collections.abc import Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
 
+import aiohttp
 from tqdm import tqdm
 
 from .client import PixivBlockedError, PixivClient, PixivError, filename_from_url
@@ -95,8 +96,9 @@ async def download_all(
             # 已被 Cloudflare 擋下，剩下的都會是同一個原因，不要洗版。
             report.failures.append((illust_id, str(exc)))
             report.blocked = True
-        except (PixivError, OSError, asyncio.TimeoutError) as exc:
-            # 單件失敗不該中斷整批，但一定要留下紀錄。
+        except (PixivError, OSError, asyncio.TimeoutError, aiohttp.ClientError) as exc:
+            # _with_retry 重試用盡後會原樣拋出 aiohttp.ClientError，
+            # 不接住的話連線被重置就會炸掉整批 gather。
             report.failures.append((illust_id, str(exc)))
             log.error('作品 %s 下載失敗：%s', illust_id, exc)
         finally:

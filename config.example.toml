@@ -30,6 +30,8 @@ multipage-dirs = "auto"
 #   concurrency      同時在飛的請求數
 #   request-interval 全域最小請求間隔（秒）—— 真正決定每秒速率的是它
 # 被 Cloudflare 擋（log 出現「Cloudflare 機器人挑戰頁」）就把 interval 調大。
+# 程式內建預設是 concurrency=4 / request-interval=0.35。這份範本刻意把
+# interval 調到 0.2 換取速度；被 Cloudflare 擋時第一個該調大的就是它。
 concurrency = 4
 request-interval = 0.2
 
