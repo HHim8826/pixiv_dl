@@ -65,29 +65,47 @@ jobs:
           --paths src
           scripts/pixiv-dl.py
 
+      # 這一步刻意執行一個以非零碼結束的指令來驗證錯誤路徑，所以不能用 pwsh：
+      # GitHub 的 pwsh 包裝會設 $ErrorActionPreference='Stop'，而 runner 上的
+      # pwsh 7.4+ 預設 $PSNativeCommandUseErrorActionPreference=$true，兩者相加
+      # 會把「任何非零離開碼的原生指令」變成終止錯誤，還沒檢查就先炸了。
+      # 包裝也會在腳本結尾附加 `exit $LASTEXITCODE`，最後那個 2 同樣會失敗。
       - name: Smoke test the exe
         if: steps.check.outputs.exists == 'false'
-        shell: pwsh
+        shell: bash
+        env:
+          EXPECTED_VERSION: ${{ steps.version.outputs.version }}
         run: |
-          $out = & dist\pixiv-dl.exe --version
-          if ($LASTEXITCODE -ne 0) { throw "exe 無法執行（exit $LASTEXITCODE）" }
-          Write-Host "exe 回報：$out"
-          if ($out -notmatch '${{ steps.version.outputs.version }}') {
-            throw "exe 的版本與套件不符：$out"
-          }
-          # 沒有設定檔時應該給出提示並回傳 2，而不是 traceback。
-          & dist\pixiv-dl.exe ranking --config nonexistent.toml 2>&1 | Out-Null
-          if ($LASTEXITCODE -ne 2) { throw "缺少設定檔時預期 exit 2，實際 $LASTEXITCODE" }
+          # Windows 的原生程式輸出可能是 CRLF。這台的 Git Bash 會吃掉 CR，
+          # 但 runner 的 MSYS2 設定不保證相同，直接去掉最保險。
+          out=$(dist/pixiv-dl.exe --version | tr -d '\r')
+          echo "exe 回報：$out"
+          if [ "$out" != "pixiv-dl $EXPECTED_VERSION" ]; then
+            echo "版本與套件不符，預期 'pixiv-dl $EXPECTED_VERSION'" >&2
+            exit 1
+          fi
+
+          # 缺設定檔時應該給出提示並回傳 2，而不是噴 traceback。
+          dist/pixiv-dl.exe ranking --config nonexistent.toml && code=0 || code=$?
+          if [ "$code" != "2" ]; then
+            echo "缺少設定檔時預期 exit 2，實際 $code" >&2
+            exit 1
+          fi
+
+          echo "煙霧測試通過"
 
       - name: Package
         if: steps.check.outputs.exists == 'false'
-        shell: pwsh
+        shell: bash
+        env:
+          TAG: ${{ steps.version.outputs.tag }}
         run: |
-          $name = "pixiv-dl-${{ steps.version.outputs.tag }}-windows-x64"
-          New-Item -ItemType Directory -Force $name | Out-Null
-          Copy-Item dist\pixiv-dl.exe, config.example.toml, README.md, LICENSE $name
-          Compress-Archive -Path "$name\*" -DestinationPath "$name.zip"
-          echo "ASSET=$name.zip" >> $env:GITHUB_ENV
+          name="pixiv-dl-$TAG-windows-x64"
+          mkdir -p "$name"
+          cp dist/pixiv-dl.exe config.example.toml README.md LICENSE "$name/"
+          powershell -Command "Compress-Archive -Path '$name/*' -DestinationPath '$name.zip'"
+          echo "ASSET=$name.zip" >> "$GITHUB_ENV"
+          ls -lh "$name.zip"
 
       - name: Create release
         if: steps.check.outputs.exists == 'false'
