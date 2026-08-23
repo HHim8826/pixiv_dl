@@ -76,7 +76,9 @@ jobs:
         env:
           EXPECTED_VERSION: ${{ steps.version.outputs.version }}
         run: |
-          out=$(dist/pixiv-dl.exe --version)
+          # Windows 的原生程式輸出可能是 CRLF。這台的 Git Bash 會吃掉 CR，
+          # 但 runner 的 MSYS2 設定不保證相同，直接去掉最保險。
+          out=$(dist/pixiv-dl.exe --version | tr -d '\r')
           echo "exe 回報：$out"
           if [ "$out" != "pixiv-dl $EXPECTED_VERSION" ]; then
             echo "版本與套件不符，預期 'pixiv-dl $EXPECTED_VERSION'" >&2
@@ -104,7 +106,6 @@ jobs:
           powershell -Command "Compress-Archive -Path '$name/*' -DestinationPath '$name.zip'"
           echo "ASSET=$name.zip" >> "$GITHUB_ENV"
           ls -lh "$name.zip"
-          echo "ASSET=$name.zip" >> $env:GITHUB_ENV
 
       - name: Create release
         if: steps.check.outputs.exists == 'false'
