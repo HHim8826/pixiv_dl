@@ -55,6 +55,11 @@ def test_challenge_page_is_recognised_not_dumped(tmp_path):
     assert len(message) < 120
 
 
+#: 這兩個值同時給測試設定與斷言使用，避免斷言寫死的數字和設定漂移。
+CHALLENGE_BACKOFF = 15.0
+PLAIN_BACKOFF = 1.0
+
+
 def test_challenge_backs_off_far_longer_than_plain_429(tmp_path):
     """一般 429 用 retry_backoff，挑戰頁要用大得多的 challenge_backoff。"""
 
@@ -71,8 +76,8 @@ def test_challenge_backs_off_far_longer_than_plain_429(tmp_path):
                 base,
                 tmp_path,
                 max_retries=2,
-                retry_backoff=1.0,
-                challenge_backoff=15.0,
+                retry_backoff=PLAIN_BACKOFF,
+                challenge_backoff=CHALLENGE_BACKOFF,
                 challenge_limit=99,
             )
             async with PixivClient(cfg, sleep=sleep) as client:
@@ -83,8 +88,14 @@ def test_challenge_backs_off_far_longer_than_plain_429(tmp_path):
     challenge_delays = run(scenario(challenge))
     plain_delays = run(scenario(plain))
 
-    assert min(challenge_delays) >= 15.0
-    assert max(plain_delays) < 15.0
+    # delays 同時收錄兩種等待：重試退避，以及 _RateLimiter.pause() 設下的
+    # 全域 cooldown。cooldown 是以「到期時刻 - 現在」計算的，所以實際睡眠
+    # 必然比名目值少掉幾微秒的計時誤差——斷言不能直接和名目值比大小，
+    # 否則在高解析度計時器的平台上會偽陽性（Windows 剛好湊成整數才矇過）。
+    assert min(challenge_delays) >= CHALLENGE_BACKOFF * 0.99
+    # 真正要驗的是量級差距：挑戰頁的最短等待遠大於一般 429 的最長等待。
+    assert min(challenge_delays) > max(plain_delays)
+    assert max(plain_delays) < CHALLENGE_BACKOFF * 0.99
 
 
 def test_retry_after_header_is_honoured(tmp_path):
